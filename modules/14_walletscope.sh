@@ -93,19 +93,32 @@ def fetch_exchange_rates():
     except (OSError, json.JSONDecodeError, KeyError):
         pass
 
-    rates = {"usd": None, "eur": None, "btc": None, "eth": None}
+    rates = {"usd": None, "eur": None, "kzt": None, "cny": None, "btc": None, "eth": None, "xmr": None, "doge": None}
     try:
         _, body = http_get("https://www.cbr-xml-daily.ru/daily_json.js", timeout=10)
         cbr = json.loads(body)
         rates["usd"] = round(cbr["Valute"]["USD"]["Value"], 2)
         rates["eur"] = round(cbr["Valute"]["EUR"]["Value"], 2)
+        # KZT/CNY у ЦБ РФ котируются НЕ обязательно за 1 единицу (Nominal
+        # может быть 10/100) — делим на Nominal, чтобы получить курс именно
+        # за 1 единицу, как и для USD/EUR. Больше десятичных знаков, чем у
+        # USD/EUR — курс тенге к рублю сам по себе маленькое число (~0.17).
+        for code, key in (("KZT", "kzt"), ("CNY", "cny")):
+            v = cbr["Valute"].get(code)
+            if v:
+                rates[key] = round(v["Value"] / v.get("Nominal", 1), 4)
     except Exception:
         pass
     try:
-        _, body = http_get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=rub", timeout=10)
+        _, body = http_get(
+            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,monero,dogecoin&vs_currencies=rub",
+            timeout=10,
+        )
         cg = json.loads(body)
         rates["btc"] = round(cg["bitcoin"]["rub"])
         rates["eth"] = round(cg["ethereum"]["rub"])
+        rates["xmr"] = round(cg["monero"]["rub"])
+        rates["doge"] = round(cg["dogecoin"]["rub"], 2)
     except Exception:
         pass
 

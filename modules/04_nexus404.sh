@@ -113,6 +113,10 @@ else
   .status-indicator{ display:flex; align-items:center; gap:7px; font-size:0.72rem; color:var(--muted); flex-shrink:0; }
   .status-indicator .dot{ width:6px; height:6px; border-radius:50%; background:var(--amber); animation:pulse 2s ease-in-out infinite; box-shadow:0 0 10px rgba(255,204,102,0.3); }
   @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+  .status-actions{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .status-actions .logout-link{ color:var(--muted); text-decoration:none; font-size:0.72rem; }
+  .status-actions .logout-link:hover{ color:var(--red); }
+  .js-push-toggle:hover{ color:var(--accent) !important; }
 
   .title-block{ display:flex; align-items:center; flex-wrap:wrap; gap:10px 15px; margin:clamp(12px, 3vw, 16px) 0 clamp(16px, 4vw, 22px); border-left:3px solid var(--accent); padding-left:14px; }
   .title-block .brand{ font-size:clamp(1.05rem, 3vw, 1.35rem); font-weight:500; color:var(--text); text-transform:uppercase; letter-spacing:0.06em; }
@@ -125,10 +129,17 @@ else
      фиксированная ширина колонки, а честное деление доступного места,
      без "перетекания" карточек за край на промежуточных ширинах. */
   .grid{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px; margin-bottom:20px; }
+  .grid-2col{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; }
   .stack-grid{ grid-template-columns:1fr !important; }
   @media(max-width:1100px){ .grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
   @media(max-width:760px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; } }
-  @media(max-width:420px){ .grid{ grid-template-columns:1fr; } }
+  @media(max-width:420px){ .grid{ grid-template-columns:1fr; } .grid-2col-mobile{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px; } }
+  @media(max-width:760px){
+    .wallet-card-main{ order:1; }
+    .wallet-card-deposit{ order:2; }
+    .wallet-card-fiat{ order:3; }
+    .wallet-card-crypto{ order:4; }
+  }
 
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); padding:16px 16px 10px; transition:all 0.2s ease; cursor:pointer; text-decoration:none; color:var(--text); display:flex; flex-direction:column; justify-content:space-between; min-height:125px; box-shadow:0 0 20px rgba(108,142,255,0.04); }
   .card:hover{ border-color:var(--accent); transform:translateY(-2px); background:#12162e; box-shadow:0 0 30px rgba(108,142,255,0.1); }
@@ -138,14 +149,15 @@ else
   .card .name{ font-size:0.8rem; font-weight:500; color:var(--text); text-transform:uppercase; letter-spacing:0.04em; overflow-wrap:break-word; }
   .card .desc{ font-size:0.75rem; color:var(--muted); letter-spacing:0.02em; text-transform:uppercase; }
   .card .bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:4px; padding-top:4px; border-top:1px solid var(--line); gap:8px; }
-  .card .badge{ font-size:0.55rem; padding:2px 10px; border-radius:10px; background:var(--line); color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em; transition:all 0.2s ease; white-space:nowrap; }
-  .card .ping{ font-size:0.55rem; font-weight:400; white-space:nowrap; }
+  .card .badge{ font-size:0.65rem; padding:3px 11px; border-radius:10px; background:var(--line); color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em; transition:all 0.2s ease; white-space:nowrap; }
+  .card .ping{ font-size:0.65rem; font-weight:600; white-space:nowrap; }
 
   .section-title{ display:flex; align-items:center; font-size:0.75rem; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin:14px 0 10px; padding:10px 16px; min-height:46px; box-sizing:border-box; background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); text-shadow:0 0 12px rgba(255,204,102,0.25); overflow:hidden; }
   .empty-state{ color:var(--muted); font-size:0.8rem; padding:30px 0; text-align:center; border:1px dashed var(--line); border-radius:var(--card-radius); }
   footer{ margin-top:auto; text-align:center; font-size:0.76rem; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; }
 
-  .metrics-row{ display:flex; gap:1px; border:1px solid var(--line); margin-top:10px; box-shadow:0 0 20px rgba(108,142,255,0.04); overflow-x:auto; }
+  .metrics-row{ display:flex; gap:1px; border:1px solid var(--line); margin-top:10px; box-shadow:0 0 20px rgba(108,142,255,0.04); overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  .metrics-row::-webkit-scrollbar{ display:none; }
   .metrics-row .metric{ flex:1; min-width:100px; background:var(--panel); padding:8px 12px; }
   .metrics-row .metric .k{ display:block; font-size:0.55rem; color:var(--muted); text-transform:lowercase; letter-spacing:0.06em; margin-bottom:1px; }
   .metrics-row .metric .v{ font-size:0.8rem; color:var(--accent); text-shadow:0 0 20px rgba(108,142,255,0.15); white-space:nowrap; }
@@ -178,7 +190,8 @@ else
   .ms-modal-box{ background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); width:100%; max-width:640px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
   .ms-modal-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line); }
   .ms-modal-header .title{ font-size:0.85rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--accent); overflow-wrap:break-word; }
-  .ms-modal-body{ padding:18px; overflow-y:auto; flex:1; }
+  .ms-modal-body{ padding:18px; overflow-y:auto; flex:1; scrollbar-width:none; -ms-overflow-style:none; }
+  .ms-modal-body::-webkit-scrollbar{ display:none; }
   .ms-modal-footer{ padding:14px 18px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
   .ms-field{ margin-bottom:14px; }
   .ms-field label{ display:block; font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
@@ -229,7 +242,13 @@ else
     .service-overlay-bar{ padding:8px 10px; gap:6px 8px; }
     .service-overlay-bar-left{ gap:6px; row-gap:4px; }
     .service-overlay-bar .back{ padding:4px 10px; font-size:0.65rem; }
-    .service-overlay-bar #overlayActions button{ font-size:0.58rem !important; padding:3px 5px !important; }
+    .service-overlay-bar #overlayActions button:not(.cheevo-icon-btn){ font-size:0.58rem !important; padding:3px 5px !important; }
+    .service-overlay-bar #overlayActions .cheevo-icon-btn{ font-size:1.05rem !important; padding:2px 12px !important; height:30px !important; }
+    /* Ряд 1: prompt слева, "online" справа. Ряд 2 (уведомления+выйти) —
+       принудительно на новую строку (flex-basis:100% в flex-wrap
+       контейнере всегда переносит элемент целиком), прижат к правому краю
+       своей собственной строки. */
+    .status-actions{ order:3; flex-basis:100%; justify-content:flex-end; margin-top:2px; }
   }
   @media(max-width:420px){
     .metrics-row{ flex-wrap:nowrap; }
@@ -246,7 +265,11 @@ else
 <div class="wrap">
   <div class="header-row">
     <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain" id="domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
-    <div class="status-indicator"><span class="dot"></span>online<a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="margin-left:14px;color:var(--muted);text-decoration:none;">[уведомления: ...]</a><a href="/logout" style="margin-left:14px;color:var(--muted);text-decoration:none;">[выйти]</a></div>
+    <div class="status-indicator"><span class="dot"></span>online</div>
+    <div class="status-actions">
+      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+      <a href="/logout" class="logout-link">[выйти]</a>
+    </div>
   </div>
   <div class="title-block">
     <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -267,7 +290,11 @@ else
   <div class="wrap" style="display:flex; flex-direction:column; height:100%; width:100%;">
     <div class="header-row">
       <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
-      <div class="status-indicator"><span class="dot"></span>online<a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="margin-left:14px;color:var(--muted);text-decoration:none;">[уведомления: ...]</a><a href="/logout" style="margin-left:14px;color:var(--muted);text-decoration:none;">[выйти]</a></div>
+      <div class="status-indicator"><span class="dot"></span>online</div>
+    <div class="status-actions">
+      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+      <a href="/logout" class="logout-link">[выйти]</a>
+    </div>
     </div>
     <div class="title-block">
       <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -326,6 +353,7 @@ else
         <label>Картинка к посту (появится сверху)</label>
         <input type="file" id="memoImageInput" accept="image/*" onchange="memoPreviewImage(event)">
         <img id="memoImagePreview">
+        <button type="button" id="memoRemoveImageBtn" onclick="memoRemoveImage()" style="display:none;margin-top:8px;font-size:0.7rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:6px;padding:5px 10px;cursor:pointer;font-family:inherit;">✕ убрать картинку</button>
       </div>
     </div>
     <div class="ms-modal-footer"><button class="ms-btn" onclick="closeMemoModal()">Отмена</button><button class="ms-btn primary" onclick="memoSavePost()">Сохранить</button></div>
@@ -346,14 +374,28 @@ else
   // понятия online/offline, в отличие от "сервисов").
   const OWN_WIDGET_IDS = ['walletscope-data', 'memoscope-posts', 'cheevoscope-stats'];
 
+  let currentCardsJson = '';
+
   async function loadCards() {
+    let freshJson;
     try {
       const res = await fetch('/data/cards.json', { cache: 'no-store' });
-      currentCards = await res.json();
+      freshJson = await res.text();
+      currentCards = JSON.parse(freshJson);
     } catch (e) {
       currentCards = [];
+      freshJson = '[]';
     }
-    renderGroups(currentCards);
+    // Список карточек меняется только когда что-то новое устанавливают
+    // (запускают модуль) — не каждые 30 секунд. Пересобирать весь DOM
+    // карточек на каждый опрос значило мерцать всей страницей на ровном
+    // месте (особенно заметно на втором мониторе) — пересобираем только
+    // если состав реально изменился, иначе просто обновляем данные внутри
+    // уже существующих карточек (loadCardPreviews не трогает остальной DOM).
+    if (freshJson !== currentCardsJson) {
+      currentCardsJson = freshJson;
+      renderGroups(currentCards);
+    }
     loadCardPreviews(currentCards);
   }
 
@@ -382,10 +424,10 @@ else
 
     let html = '';
     if (services.length) {
-      html += `<div class="section-title">сервисы</div><div class="grid">${services.map(i => renderCard(i, 'сервис')).join('')}</div>`;
+      html += `<div class="section-title">сервисы</div><div class="grid grid-2col">${services.map(i => renderCard(i, 'сервис')).join('')}</div>`;
     }
     if (ownWidgets.length) {
-      html += `<div class="section-title">виджеты</div><div class="grid">${ownWidgets.map(i => renderCard(i, 'виджет')).join('')}</div>`;
+      html += `<div class="section-title">виджеты</div><div class="grid grid-2col">${ownWidgets.map(i => renderCard(i, 'виджет')).join('')}</div>`;
     }
     container.innerHTML = html;
   }
@@ -451,8 +493,14 @@ else
           }
         }
         if (pingEl) {
-          pingEl.textContent = (data.online && data.ping_ms != null) ? `${data.ping_ms}ms` : '';
-          pingEl.style.color = 'var(--muted)';
+          if (data.online && data.ping_ms != null) {
+            pingEl.textContent = `${data.ping_ms}ms`;
+            // Градация по скорости отклика — не про "хорошо/плохо для
+            // сервиса", просто ориентир, насколько быстро хаб достучался.
+            pingEl.style.color = data.ping_ms < 150 ? 'var(--green)' : (data.ping_ms < 400 ? 'var(--amber)' : 'var(--red)');
+          } else {
+            pingEl.textContent = '';
+          }
         }
       } catch (e) { /* тихо — это необязательное превью, не основная функция */ }
     }
@@ -569,8 +617,11 @@ else
     overlay.classList.add('open');
     // Добавляем запись в историю браузера — без этого системная кнопка
     // "назад" на Android (и жест "назад" в PWA, добавленном на экран)
-    // закрывала бы всё приложение целиком, а не оверлей.
-    history.pushState({ nexusOverlay: true }, '', location.href);
+    // закрывала бы всё приложение целиком, а не оверлей. Хэш в адресе
+    // (не просто тот же адрес) нужен, чтобы обновление страницы (F5) не
+    // выкидывало на главную — при загрузке проверяем хэш и восстанавливаем
+    // открытый виджет (см. restoreOpenWidgetFromHash ниже).
+    history.pushState({ nexusOverlay: true }, '', `#${encodeURIComponent(widget)}`);
   }
 
   // silent=true — тихое фоновое обновление (для автообновления по
@@ -607,7 +658,7 @@ else
       if (!d.systems || d.systems.length === 0) {
         return `<div class="widget-placeholder">систем в Beszel пока нет</div>`;
       }
-      return `<div class="widget-body"><div class="grid">${d.systems.map(sys => {
+      return `<div class="widget-body"><div class="grid grid-2col">${d.systems.map(sys => {
         const netKb = sys.network_bytes_recent ? (sys.network_bytes_recent / 1024).toFixed(1) : '0';
         return `
           <div class="card static" style="align-items:stretch;cursor:default;">
@@ -681,6 +732,7 @@ else
             <div class="name">создать репозиторий из ZIP</div>
             <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
               <input type="text" id="fj-new-repo-name" placeholder="имя-репозитория" style="background:var(--bg);border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:0.75rem;">
+              <input type="text" id="fj-new-repo-desc" placeholder="описание (необязательно)" style="background:var(--bg);border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:0.75rem;">
               <label style="font-size:0.7rem;color:var(--muted);display:flex;align-items:center;gap:6px;"><input type="checkbox" id="fj-new-repo-private"> приватный</label>
               <input type="file" id="fj-new-repo-zip" accept=".zip" style="font-size:0.7rem;color:var(--muted);">
               <button onclick="createForgejoRepoFromZip()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">загрузить и создать</button>
@@ -691,7 +743,7 @@ else
       if (!d.repos || d.repos.length === 0) {
         return `<div class="widget-body">${createPanel}<div class="widget-placeholder">репозиториев пока нет</div></div>`;
       }
-      return `<div class="widget-body">${createPanel}<div class="grid">${d.repos.map(repo => {
+      return `<div class="widget-body">${createPanel}<div class="grid grid-2col">${d.repos.map(repo => {
         const safeId = repo.full_name.replace(/[^\w-]/g,'_');
         return `
         <div class="card static" id="fj-repo-${escapeHtml(safeId)}">
@@ -778,8 +830,8 @@ else
     const actionsEl = document.getElementById('overlayActions');
     if (actionsEl) {
       actionsEl.innerHTML = `
-        <button onclick="refreshCheevoscope('quick')" title="Быстрое обновление (список игр + достижения)" style="font-size:0.8rem;color:var(--accent);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻</button>
-        <button onclick="refreshCheevoscope('full')" title="Полное обновление (+ цены, отзывы, картинки)" style="font-size:0.8rem;color:var(--muted);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻+</button>
+        <button class="cheevo-icon-btn" onclick="refreshCheevoscope('quick')" title="Быстрое обновление (список игр + достижения)" style="font-size:0.8rem;color:var(--accent);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻</button>
+        <button class="cheevo-icon-btn" onclick="refreshCheevoscope('full')" title="Полное обновление (+ цены, отзывы, картинки)" style="font-size:0.8rem;color:var(--muted);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻+</button>
         <span id="cheevo-refresh-status" style="font-size:0.6rem;color:var(--muted);white-space:nowrap;"></span>
       `;
     }
@@ -818,10 +870,19 @@ else
 
   function cheevoRarityChips(tiers) {
     if (!tiers || !tiers.total_rated) return '';
+    // Точки в реальных цветах тира — тот же приём, что золотая точка
+    // "online" в шапке, просто разные цвета под разные тиры редкости.
+    const tierColors = {
+      gold: '#ffd700', purple: '#b565f0', blue: '#6c8eff',
+      green: '#4caf50', white: '#e8e8e8', gray: '#8a8f9c',
+    };
     const chips = Object.entries(tiers.counts || {}).map(([tier, count]) => `
-      <div style="font-size:0.6rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 6px;">${escapeHtml(tier)}: <span style="color:var(--text);">${count}</span></div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:0.65rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 8px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:${tierColors[tier] || 'var(--muted)'};box-shadow:0 0 6px ${tierColors[tier] || 'var(--muted)'}80;flex-shrink:0;"></span>
+        ${escapeHtml(tier)}: <span style="color:var(--text);">${count}</span>
+      </div>
     `).join('');
-    return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 0;">${chips}</div>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;">${chips}</div>`;
   }
 
   function cheevoHeatmapCells(heatmap) {
@@ -851,7 +912,7 @@ else
     const cells = cheevoHeatmapCells((cheevoLastData.steam || {}).heatmap);
     if (!cells) { el.innerHTML = ''; return; }
     const max = Math.max(1, ...cells);
-    const colors = ['rgba(255,255,255,0.05)', 'rgba(108,142,255,0.3)', 'rgba(108,142,255,0.55)', 'rgba(108,142,255,0.8)', 'var(--accent)'];
+    const colors = ['rgba(255,255,255,0.05)', 'rgba(108,142,255,0.3)', 'rgba(108,142,255,0.55)', 'rgba(108,142,255,0.8)', 'var(--amber)'];
     const level = n => n === 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4));
     const perRow = 21; // 3 недели горизонтально в одной строке
     const gap = 2;
@@ -861,6 +922,9 @@ else
     // от нового к старому (cells уже в этом порядке, см. cheevoHeatmapCells).
     const rows = [];
     for (let i = 0; i < cells.length; i += perRow) rows.push(cells.slice(i, i + perRow));
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+    el.style.alignItems = 'center';
     el.innerHTML = rows.map(row => `
       <div style="display:flex;gap:${gap}px;margin-bottom:${gap}px;">${row.map(n => `<div style="width:${cellSize}px;height:${cellSize}px;border-radius:2px;background:${colors[level(n)]};flex-shrink:0;"></div>`).join('')}</div>
     `).join('');
@@ -868,7 +932,10 @@ else
 
   function cheevoRarestList(rarest) {
     if (!rarest || !rarest.length) return '';
-    return rarest.map(a => `<div style="font-size:0.72rem;color:var(--text);border-top:1px solid var(--line);padding-top:4px;margin-top:4px;">${escapeHtml(a.name || a.achievement || '')}<div style="color:var(--muted);font-size:0.65rem;margin-top:1px;">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`).join('');
+    return rarest.map(a => {
+      const isSuperRare = a.global_percent != null && a.global_percent <= 1;
+      return `<div style="font-size:0.72rem;color:var(--text);border-top:1px solid var(--line);padding-top:4px;margin-top:4px;">${escapeHtml(a.name || a.achievement || '')}${isSuperRare ? ' 🏆' : ''}<div style="color:${isSuperRare ? 'var(--amber)' : 'var(--muted)'};font-size:0.65rem;margin-top:1px;font-weight:${isSuperRare ? '600' : '400'};">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`;
+    }).join('');
   }
 
   // Карточка с заголовком в том же стиле, что и остальные карточки хаба —
@@ -933,11 +1000,18 @@ else
       <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.08);margin-top:4px;overflow:hidden;">
         <div style="height:100%;width:${g.achievements_percent}%;background:${color};"></div>
       </div>` : `<div class="desc" style="margin-top:6px;">нет достижений</div>`;
-    return `<div class="card${onclick ? '' : ' static'}" ${onclick ? `onclick="${onclick}"` : 'style="cursor:default;"'}>
+    // review_desc и т.п. считаются и хранятся бэкендом (см. cheevo_fetch_reviews),
+    // но раньше нигде не отрисовывались на карточке — реальный пробел, не
+    // просто "не завезли": данные были готовы, просто не выводились.
+    const reviewColor = (g.review_positive_percent ?? 0) >= 70 ? 'var(--green)' : ((g.review_positive_percent ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)');
+    const reviewBlock = g.review_desc ? `
+      <div style="font-size:0.65rem;color:${reviewColor};margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.review_desc)} · ${g.review_positive_percent ?? 0}% (${g.review_total ?? 0})</div>` : '';
+    return `<div class="card${onclick ? '' : ' static'}" data-name="${escapeHtml((g.name || '').toLowerCase())}" data-hours="${g.hours ?? 0}" data-achpct="${g.achievements_percent ?? -1}" ${onclick ? `onclick="${onclick}"` : 'style="cursor:default;"'}>
       <div class="top">
         <img src="${escapeHtml(candidates[0] || '')}" data-candidates='${escapeHtml(JSON.stringify(candidates))}' data-fallback-idx="0" loading="lazy" onerror="handleCheevoImgError(this)" style="width:100%;aspect-ratio:16/7.5;object-fit:cover;border-radius:6px;margin-bottom:8px;background:var(--bg);">
-        <div class="name" style="display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(g.name || '')}</div>
+        <div class="name" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(g.name || '')}</div>
         <div class="desc" style="margin-top:2px;">${g.hours ?? 0}ч</div>
+        ${reviewBlock}
         ${achBlock}
       </div>
     </div>`;
@@ -949,7 +1023,7 @@ else
     const statusText = g.status === 'mastered' ? 'замастерено' : (g.status === 'completed' ? 'завершено' : 'в процессе');
     const barColor = g.status === 'mastered' ? 'var(--amber)' : 'var(--accent)';
     const icon = g.image_icon ? `<img src="https://media.retroachievements.org${escapeHtml(g.image_icon)}" loading="lazy" style="width:40px;height:40px;border-radius:6px;flex-shrink:0;object-fit:cover;">` : '';
-    return `<div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;min-height:0;padding:10px 12px;" onclick="openCheevoAchievements('retro', ${g.game_id}, '${escapeHtml(g.title || '').replace(/'/g, "\\'")}')">
+    return `<div class="card static" data-name="${escapeHtml((g.title || '').toLowerCase())}" data-hours="0" data-hardcore="${g.hardcore_percent ?? 0}" data-softcore="${g.softcore_percent ?? 0}" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;min-height:0;padding:10px 12px;" onclick="openCheevoAchievements('retro', ${g.game_id}, '${escapeHtml(g.title || '').replace(/'/g, "\\'")}')">
       ${icon}
       <div style="min-width:0;flex:1;">
         <div class="name" style="white-space:normal;">${escapeHtml(g.title || '')}</div>
@@ -974,7 +1048,7 @@ else
         <div class="balance-label" style="margin-top:2px;">${label}</div>
       </div>`;
     const summaryCard = `
-      <div class="card static" style="align-items:stretch;cursor:default;">
+      <div class="card static" style="align-items:stretch;cursor:default;height:100%;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:10px;">steam</div>
           <div style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;">
@@ -983,7 +1057,7 @@ else
             ${statBlock(`${sum.achievements_overall_percent ?? 0}%`, `ачивок: ${sum.achievements_unlocked_total ?? 0}/${sum.achievements_available_total ?? 0}`, 'var(--accent)')}
             ${statBlock(sum.games_completed_100 ?? 0, 'пройдено на 100%', 'var(--amber)')}
           </div>
-          <div style="font-size:0.7rem;color:var(--muted);margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">стоимость библиотеки: <span style="color:var(--text);">$${sum.library_cost_usd ?? 0}</span></div>
+          <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;"><span style="font-size:0.7rem;color:var(--muted);">стоимость библиотеки</span><div style="font-size:1.35rem;font-weight:600;color:var(--text);margin-top:2px;">$${sum.library_cost_usd ?? 0}</div></div>
           ${cheevoRarityChips(s.rarity_tiers)}
         </div>
       </div>`;
@@ -997,13 +1071,79 @@ else
       <div style="flex:1;min-width:220px;">${heatmapCard}</div>
     </div>`;
     const games = s.games || [];
+    const searchBar = games.length ? `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="text" id="cheevo-search-steam" placeholder="Поиск по названию…" oninput="cheevoFilterGames('cheevo-games-steam', 'cheevo-search-steam', 'cheevo-sort-steam')" style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text);font-family:inherit;font-size:0.8rem;">
+      <select id="cheevo-sort-steam" onchange="cheevoFilterGames('cheevo-games-steam', 'cheevo-search-steam', 'cheevo-sort-steam')" style="background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text);font-family:inherit;font-size:0.8rem;">
+        <option value="name">По алфавиту</option>
+        <option value="hours">По часам в игре</option>
+        <option value="achievements">По % достижений</option>
+      </select>
+    </div>` : '';
     const gamesGrid = games.length
-      ? `<div class="grid">${games.map(g => cheevoGameCard(
-          g.appid, g,
-          g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${escapeHtml(g.name || '').replace(/'/g, "\\'")}')` : '',
-        )).join('')}</div>`
+      ? `${searchBar}<div class="grid" id="cheevo-games-steam">${cheevoGamesWithDivider(games)}</div>`
       : `<div class="widget-placeholder">игр пока нет — нажмите "обновить"</div>`;
     return topRow + gamesGrid;
+  }
+
+  // Игры с достижениями и без — раздельно, с тонким разделителем между
+  // ними (backend уже отдаёт список в этом порядке — с ачивками сначала).
+  // Ищем точку перехода динамически (а не полагаемся на фиксированный
+  // индекс) — безопасно даже после поиска/сортировки, если группировка
+  // всё ещё целиком последовательна; если нет — просто не показываем
+  // разделитель, чтобы не воткнуть его в случайное место.
+  function cheevoGamesWithDivider(games) {
+    const withAch = games.filter(g => g.achievements_percent !== null && g.achievements_percent !== undefined);
+    const withoutAch = games.filter(g => g.achievements_percent === null || g.achievements_percent === undefined);
+    const isCleanSplit = withAch.length + withoutAch.length === games.length &&
+      games.slice(0, withAch.length).every(g => withAch.includes(g));
+    const cardsHtml = (list) => list.map(g => cheevoGameCard(
+      g.appid, g,
+      g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${escapeHtml(g.name || '').replace(/'/g, "\\'")}')` : '',
+    )).join('');
+    if (!isCleanSplit || !withoutAch.length || !withAch.length) {
+      return cardsHtml(games);
+    }
+    const divider = `<div class="cheevo-group-label" style="grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:6px 0;color:var(--muted);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;">
+      <div style="flex:1;height:1px;background:var(--line);"></div>без достижений<div style="flex:1;height:1px;background:var(--line);"></div>
+    </div>`;
+    return cardsHtml(withAch) + divider + cardsHtml(withoutAch);
+  }
+
+  // Поиск+сортировка списка игр — та же логика, что была в оригинальном
+  // проекте (см. templates/*.html filterGamesGrid): по алфавиту (умолчание)
+  // не трогаем порядок построения (уже "с ачивками сначала"), сортировки
+  // по часам/% ачивок/hardcore/softcore перемешивают эту группировку —
+  // тогда прячем разделитель (в перемешанном порядке он теряет смысл).
+  function cheevoFilterGames(gridId, searchId, sortId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    const query = (document.getElementById(searchId).value || '').trim().toLowerCase();
+    const sortBy = document.getElementById(sortId).value;
+    const tiles = Array.from(grid.querySelectorAll(':scope > .card'));
+    const labels = Array.from(grid.querySelectorAll(':scope > .cheevo-group-label'));
+
+    tiles.forEach(tile => {
+      const match = (tile.dataset.name || '').includes(query);
+      tile.style.display = match ? '' : 'none';
+    });
+
+    if (sortBy !== 'name') {
+      labels.forEach(l => { l.style.display = 'none'; });
+      const key = sortBy === 'hours' ? 'hours' : (sortBy === 'achievements' ? 'achpct' : (sortBy === 'hardcore' ? 'hardcore' : 'softcore'));
+      const sorted = tiles.slice().sort((a, b) => Number(b.dataset[key] || -1) - Number(a.dataset[key] || -1));
+      sorted.forEach(tile => grid.appendChild(tile));
+    } else {
+      labels.forEach(l => {
+        const next = l.nextElementSibling;
+        // Группа "без достижений" — единственная за разделителем; видимость
+        // самого разделителя зависит от того, остался ли там хоть один
+        // видимый тайл после поиска.
+        let anyVisible = false;
+        let sib = next;
+        while (sib) { if (sib.classList.contains('card') && sib.style.display !== 'none') anyVisible = true; sib = sib.nextElementSibling; }
+        l.style.display = anyVisible ? '' : 'none';
+      });
+    }
   }
 
   function renderCheevoRetroTab(r) {
@@ -1016,7 +1156,7 @@ else
         <div class="balance-label" style="margin-top:2px;">${label}</div>
       </div>`;
     const summaryCard = `
-      <div class="card static" style="align-items:stretch;cursor:default;">
+      <div class="card static" style="align-items:stretch;cursor:default;height:100%;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:10px;">${escapeHtml(profile.username || 'retroachievements')}</div>
           <div style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;">
@@ -1040,8 +1180,16 @@ else
       <div style="flex:1;min-width:220px;">${rarestCard}</div>
     </div>`;
     const games = r.games || [];
+    const searchBarRA = games.length ? `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input type="text" id="cheevo-search-retro" placeholder="Поиск по названию…" oninput="cheevoFilterGames('cheevo-games-retro', 'cheevo-search-retro', 'cheevo-sort-retro')" style="flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text);font-family:inherit;font-size:0.8rem;">
+      <select id="cheevo-sort-retro" onchange="cheevoFilterGames('cheevo-games-retro', 'cheevo-search-retro', 'cheevo-sort-retro')" style="background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text);font-family:inherit;font-size:0.8rem;">
+        <option value="name">По алфавиту</option>
+        <option value="hardcore">По hardcore %</option>
+        <option value="softcore">По softcore %</option>
+      </select>
+    </div>` : '';
     const gamesGrid = games.length
-      ? `<div style="display:flex;flex-direction:column;gap:8px;">${games.map(cheevoRetroRow).join('')}</div>`
+      ? `${searchBarRA}<div id="cheevo-games-retro" style="display:flex;flex-direction:column;gap:8px;">${games.map(cheevoRetroRow).join('')}</div>`
       : '';
     return topRow + gamesGrid;
   }
@@ -1052,7 +1200,7 @@ else
     const rsum = (r && r.summary) || {};
     const rprofile = (r && r.profile) || {};
     const steamSummaryCard = `
-      <div class="card static" style="align-items:stretch;cursor:default;">
+      <div class="card static" style="align-items:stretch;cursor:default;height:100%;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">steam</div>
           <div style="display:flex;flex-direction:column;gap:4px;">${cheevoRows([
@@ -1061,7 +1209,7 @@ else
         </div>
       </div>`;
     const raSummaryCard = `
-      <div class="card static" style="align-items:stretch;cursor:default;">
+      <div class="card static" style="align-items:stretch;cursor:default;height:100%;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">retroachievements</div>
           <div style="display:flex;flex-direction:column;gap:4px;">${cheevoRows([
@@ -1097,14 +1245,16 @@ else
       }
       body.innerHTML = `<div class="grid stack-grid">${data.achievements.map(a => {
         const icon = platform === 'retro' ? a.badge_url : (a.unlocked ? a.icon : (a.icon_gray || a.icon));
+        const isSuperRare = a.global_percent != null && a.global_percent <= 1;
+        const rareStyle = isSuperRare ? 'border-color:var(--amber);box-shadow:0 0 12px rgba(255,204,102,0.25);' : '';
         return `
-        <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};">
-          ${icon ? `<img src="${escapeHtml(icon)}" style="width:40px;height:40px;border-radius:6px;flex-shrink:0;">` : ''}
+        <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};min-height:0;padding:8px 10px;${rareStyle}">
+          ${icon ? `<img src="${escapeHtml(icon)}" style="width:36px;height:36px;border-radius:6px;flex-shrink:0;">` : ''}
           <div style="min-width:0;flex:1;">
-            <div class="name" style="white-space:normal;">${escapeHtml(a.name || a.achievement || '')}</div>
-            <div class="desc" style="margin-top:2px;text-transform:none;white-space:normal;">${escapeHtml(a.description || '')}</div>
+            <div class="name" style="white-space:normal;font-size:0.82rem;">${escapeHtml(a.name || a.achievement || '')}${isSuperRare ? ' 🏆' : ''}</div>
+            <div class="desc" style="margin-top:1px;text-transform:none;white-space:normal;font-size:0.7rem;">${escapeHtml(a.description || '')}</div>
           </div>
-          <div style="font-size:0.7rem;color:var(--amber);flex-shrink:0;">${a.global_percent ?? '?'}%</div>
+          <div style="font-size:0.7rem;color:var(--amber);flex-shrink:0;font-weight:${isSuperRare ? '700' : '400'};">${a.global_percent ?? '?'}%</div>
         </div>`;
       }).join('')}</div>`;
     } catch (e) {
@@ -1149,8 +1299,8 @@ else
       </div>`).join('');
 
     return `<div class="widget-body">
-      <div class="grid" style="margin-bottom:14px;">
-        <div class="card static" style="align-items:stretch;cursor:default;">
+      <div class="grid grid-2col-mobile" style="margin-bottom:14px;">
+        <div class="card static wallet-card-main" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Карта</div>
             <div class="balance-amount">${formatRub(d.card)}</div>
@@ -1160,25 +1310,29 @@ else
             </div>
           </div>
         </div>
-        <div class="card static" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-fiat" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Валюта</div>
             <div class="rates-grid" style="margin-top:8px;">
               ${rateChip('USD', rates.usd, true)}
               ${rateChip('EUR', rates.eur, true)}
+              ${rateChip('KZT', rates.kzt, true)}
+              ${rateChip('CNY', rates.cny, true)}
             </div>
           </div>
         </div>
-        <div class="card static" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-crypto" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Криптовалюта</div>
             <div class="rates-grid" style="margin-top:8px;">
               ${rateChip('BTC', rates.btc, true)}
               ${rateChip('ETH', rates.eth, true)}
+              ${rateChip('XMR', rates.xmr, true)}
+              ${rateChip('DOGE', rates.doge, true)}
             </div>
           </div>
         </div>
-        <div class="card static" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-deposit" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Депозит</div>
             <div class="balance-amount">${formatRub(d.deposit)}</div>
@@ -1187,7 +1341,7 @@ else
         </div>
       </div>
       <div class="name" style="margin-bottom:8px;">операции</div>
-      <div class="grid">${txCards || '<div class="widget-placeholder">записей пока нет</div>'}</div>
+      <div class="grid grid-2col-mobile">${txCards || '<div class="widget-placeholder">записей пока нет</div>'}</div>
     </div>`;
   }
 
@@ -1274,7 +1428,7 @@ else
     el.className = 'card static memo-post';
     el.style.cssText = 'cursor:default;align-items:stretch;';
     const imgTag = post.image
-      ? `<div style="background:var(--bg);border-radius:6px;margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;max-height:260px;"><img src="/api/memoscope/image/${encodeURIComponent(post.image)}" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;display:block;"></div>`
+      ? `<div style="border-radius:6px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;"><img src="/api/memoscope/image/${encodeURIComponent(post.image)}" loading="lazy" style="max-width:100%;max-height:260px;width:auto;height:auto;border-radius:6px;display:block;"></div>`
       : '';
     el.innerHTML = `
       <div class="top" style="width:100%;">
@@ -1332,14 +1486,17 @@ else
     document.getElementById('memoPostModalTitle').textContent = post ? 'Изменить пост' : 'Новый пост';
     document.getElementById('memoEditorArea').innerHTML = post ? post.html : '';
     const preview = document.getElementById('memoImagePreview');
+    const removeBtn = document.getElementById('memoRemoveImageBtn');
     if (post && post.image) {
       preview.src = `/api/memoscope/image/${encodeURIComponent(post.image)}`;
       preview.style.display = 'block';
       delete preview.dataset.value;
       preview.dataset.unchanged = '1';
+      removeBtn.style.display = 'inline-block';
     } else {
       preview.style.display = 'none'; preview.removeAttribute('src');
       delete preview.dataset.value; delete preview.dataset.unchanged;
+      removeBtn.style.display = 'none';
     }
     document.getElementById('memoImageInput').value = '';
     document.getElementById('memoPostModalBackdrop').classList.add('open');
@@ -1365,8 +1522,24 @@ else
       preview.style.display = 'block';
       preview.dataset.value = e.target.result;
       delete preview.dataset.unchanged;
+      document.getElementById('memoRemoveImageBtn').style.display = 'inline-block';
     };
     reader.readAsDataURL(file);
+  }
+
+  // Убирает картинку у поста — отдельно от удаления самого поста. Снимаем
+  // и "unchanged" (была старая), и "value" (была новая выбранная) — при
+  // сохранении memoSavePost увидит отсутствие обоих и пошлёт
+  // image_data_url:null, что бэкенд (widget_memoscope_edit) уже умеет
+  // трактовать как "убрать картинку и удалить файл с диска".
+  function memoRemoveImage() {
+    const preview = document.getElementById('memoImagePreview');
+    preview.style.display = 'none';
+    preview.removeAttribute('src');
+    delete preview.dataset.value;
+    delete preview.dataset.unchanged;
+    document.getElementById('memoImageInput').value = '';
+    document.getElementById('memoRemoveImageBtn').style.display = 'none';
   }
 
   async function memoSavePost() {
@@ -1441,6 +1614,7 @@ else
 
   async function createForgejoRepoFromZip() {
     const nameInput = document.getElementById('fj-new-repo-name');
+    const descInput = document.getElementById('fj-new-repo-desc');
     const privateInput = document.getElementById('fj-new-repo-private');
     const zipInput = document.getElementById('fj-new-repo-zip');
     const statusEl = document.getElementById('fj-create-status');
@@ -1450,6 +1624,7 @@ else
 
     const form = new FormData();
     form.append('repo_name', name);
+    form.append('description', descInput.value.trim());
     form.append('private', privateInput.checked ? 'true' : 'false');
     form.append('file', zipInput.files[0]);
 
@@ -1532,7 +1707,7 @@ else
   async function updatePushToggleText() {
     const els = document.querySelectorAll('.js-push-toggle');
     if (!pushSupported()) {
-      els.forEach(el => { el.textContent = '[уведомления недоступны]'; el.style.opacity = '0.4'; el.style.pointerEvents = 'none'; });
+      els.forEach(el => { el.title = 'Push-уведомления недоступны в этом браузере'; el.style.opacity = '0.3'; el.style.pointerEvents = 'none'; });
       return;
     }
     try {
@@ -1543,13 +1718,16 @@ else
       // undefined сразу, если активной регистрации нет.
       const reg = await navigator.serviceWorker.getRegistration();
       if (!reg) {
-        els.forEach(el => { el.textContent = '[уведомления: выкл]'; });
+        els.forEach(el => { el.title = 'Уведомления выключены — нажмите, чтобы включить'; el.style.opacity = '0.5'; });
         return;
       }
       const sub = await reg.pushManager.getSubscription();
-      els.forEach(el => { el.textContent = sub ? '[уведомления: вкл]' : '[уведомления: выкл]'; });
+      els.forEach(el => {
+        el.title = sub ? 'Уведомления включены — нажмите, чтобы выключить' : 'Уведомления выключены — нажмите, чтобы включить';
+        el.style.opacity = sub ? '1' : '0.5';
+      });
     } catch (e) {
-      els.forEach(el => { el.textContent = '[уведомления: выкл]'; });
+      els.forEach(el => { el.title = 'Уведомления выключены'; el.style.opacity = '0.5'; });
     }
   }
 
@@ -1644,6 +1822,10 @@ else
   }
 
   function closeOverlay() {
+    // Если поверх открыта модалка (транзакция/пост/ачивки) — кнопка
+    // "назад" сначала закрывает её саму, а не весь оверлей позади.
+    const openModal = document.querySelector('.ms-modal-backdrop.open');
+    if (openModal) { openModal.classList.remove('open'); return; }
     // Не закрываем DOM напрямую — идём через history.back(), чтобы запись,
     // добавленная в openService(), не оставалась "хвостом" в истории
     // (иначе следующее нажатие системной кнопки "назад" пришлось бы делать
@@ -1657,8 +1839,24 @@ else
   }
 
   // Системная кнопка "назад" (Android) и жест "назад" в PWA тоже вызывают
-  // popstate — реагируем так же, как на клик по кнопке в интерфейсе.
-  window.addEventListener('popstate', closeOverlayDom);
+  // popstate. Если поверх открыта модалка (транзакция/пост/ачивки) —
+  // закрываем только её, а не весь оверлей позади (иначе "назад" сразу
+  // выкидывал бы на главную, минуя закрытие модалки). Запись истории для
+  // оверлея уже "съедена" самим popstate — восстанавливаем её, чтобы
+  // следующее нажатие "назад" закрыло уже сам оверлей, а не пробегало
+  // мимо ещё раз впустую.
+  window.addEventListener('popstate', () => {
+    const openModal = document.querySelector('.ms-modal-backdrop.open');
+    if (openModal) {
+      openModal.classList.remove('open');
+      const overlay = document.getElementById('serviceOverlay');
+      if (overlay && overlay.classList.contains('open')) {
+        history.pushState({ nexusOverlay: true }, '', location.href);
+      }
+      return;
+    }
+    closeOverlayDom();
+  });
 
   document.addEventListener('keydown', (e) => {
     const openModal = document.querySelector('.ms-modal-backdrop.open');
@@ -1741,10 +1939,24 @@ else
   document.querySelectorAll('.js-domain').forEach(el => el.textContent = hostname);
 
   loadCards()
+    .then(() => restoreOpenWidgetFromHash())
     .catch((e) => { console.error('loadCards failed:', e); });
   setInterval(loadCards, 30000);
   setInterval(measureBottomPing, 10000);
   setInterval(tick, 1000);
+
+  // Обновление страницы (F5) раньше всегда возвращало на главную — адрес
+  // никогда не менялся при открытии виджета. Теперь при открытии в адрес
+  // добавляется #widget-id (см. openService), и здесь при загрузке
+  // страницы мы проверяем этот хэш и открываем тот же виджет заново.
+  function restoreOpenWidgetFromHash() {
+    const widgetId = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!widgetId) return;
+    const item = currentCards.flatMap(g => g.items).find(i => i.widget === widgetId);
+    if (!item) return;
+    // openService сам сделает pushState с тем же хэшем — не дублируем.
+    openService(item.name, item.widget);
+  }
 </script>
 </body>
 </html>
@@ -2554,12 +2766,13 @@ def widget_forgejo_upload_zip(handler):
         handler._send_json({"error": "некорректное имя репозитория (буквы/цифры/-/_/. без пробелов)"}, status=400)
         return
     private = fields.get("private") == "true"
+    description = (fields.get("description") or "").strip()
     zip_content = files[0][2]
 
     try:
         status, repo_data = forgejo_api_request(
             "POST", "/api/v1/user/repos", token,
-            {"name": repo_name, "private": private, "auto_init": True},
+            {"name": repo_name, "private": private, "auto_init": True, "description": description},
         )
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", errors="ignore")
