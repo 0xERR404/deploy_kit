@@ -599,6 +599,7 @@ else
     currentOpenWidgetId = widgetId;
     container.innerHTML = renderWidget(widgetId, data);
     if (widgetId === 'memoscope-posts') memoLayout();
+    if (widgetId === 'cheevoscope-stats') cheevoFillHeatmap();
   }
 
   function renderWidget(widgetId, d) {
@@ -806,6 +807,7 @@ else
     cheevoActiveTab = tab;
     const container = document.getElementById('overlayBody');
     if (container && cheevoLastData) container.innerHTML = renderCheevoscope(cheevoLastData);
+    cheevoFillHeatmap();
   }
 
   function cheevoRows(pairs) {
@@ -822,28 +824,45 @@ else
     return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 0;">${chips}</div>`;
   }
 
-  function cheevoHeatmap(heatmap) {
+  function cheevoHeatmapCells(heatmap) {
     const counts = heatmap || {};
-    if (!Object.keys(counts).length) return '';
+    if (!Object.keys(counts).length) return null;
     const days = 365;
     const today = new Date();
     const cells = [];
-    for (let i = days - 1; i >= 0; i--) {
+    // cells[0] — сегодня, cells[последний] — 364 дня назад. Верхний левый
+    // угол сетки (первая клетка первой строки) получится сегодняшним днём.
+    for (let i = 0; i < days; i++) {
       const d2 = new Date(today);
       d2.setDate(d2.getDate() - i);
       cells.push(counts[d2.toISOString().slice(0, 10)] || 0);
     }
+    return cells;
+  }
+
+  // Ширина клетки заранее не известна — карточка активности растянута
+  // наравне с соседними (см. renderCheevoSteamTab), а её реальную ширину
+  // браузер посчитает только после вставки в DOM. Поэтому сначала рисуем
+  // пустой placeholder, а после вставки — меряем и дозаполняем (тот же
+  // приём, что и в memoLayout для MemoScope).
+  function cheevoFillHeatmap() {
+    const el = document.getElementById('cheevo-heatmap-cells');
+    if (!el || !cheevoLastData) return;
+    const cells = cheevoHeatmapCells((cheevoLastData.steam || {}).heatmap);
+    if (!cells) { el.innerHTML = ''; return; }
     const max = Math.max(1, ...cells);
     const colors = ['rgba(255,255,255,0.05)', 'rgba(108,142,255,0.3)', 'rgba(108,142,255,0.55)', 'rgba(108,142,255,0.8)', 'var(--accent)'];
     const level = n => n === 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4));
-    const weeks = [];
-    for (let w = 0; w < Math.ceil(days / 7); w++) weeks.push(cells.slice(w * 7, w * 7 + 7));
-    // Одна строка = одна неделя (7 клеток горизонтально), недели идут
-    // сверху вниз: самая новая — сверху, проваливаются вниз по мере
-    // накопления истории — узкая колонка (1/3 ряда) не мешает, высота
-    // карточки просто растёт вместе с данными.
-    return [...weeks].reverse().map(week => `
-      <div style="display:flex;gap:3px;">${week.map(n => `<div style="width:13px;height:13px;border-radius:3px;background:${colors[level(n)]};flex-shrink:0;"></div>`).join('')}</div>
+    const perRow = 21; // 3 недели горизонтально в одной строке
+    const gap = 2;
+    const containerWidth = el.clientWidth || (el.parentElement && el.parentElement.clientWidth) || 250;
+    const cellSize = Math.max(6, Math.floor((containerWidth - gap * (perRow - 1)) / perRow));
+    // Верхний левый угол — сегодня, дальше слева направо и сверху вниз =
+    // от нового к старому (cells уже в этом порядке, см. cheevoHeatmapCells).
+    const rows = [];
+    for (let i = 0; i < cells.length; i += perRow) rows.push(cells.slice(i, i + perRow));
+    el.innerHTML = rows.map(row => `
+      <div style="display:flex;gap:${gap}px;margin-bottom:${gap}px;">${row.map(n => `<div style="width:${cellSize}px;height:${cellSize}px;border-radius:2px;background:${colors[level(n)]};flex-shrink:0;"></div>`).join('')}</div>
     `).join('');
   }
 
@@ -855,19 +874,12 @@ else
   // Карточка с заголовком в том же стиле, что и остальные карточки хаба —
   // используется для heatmap и списка редких ачивок, чтобы они не висели
   // голым текстом на фоне, а смотрелись как часть общей сетки.
-  function cheevoInfoCard(title, content, options) {
+  function cheevoInfoCard(title, content) {
     if (!content) return '';
-    let wrapStyle = '', wrapClass = '';
-    if (options && options.scrollX) {
-      wrapStyle = 'display:flex;gap:2px;overflow-x:auto;';
-      wrapClass = 'no-scrollbar';
-    } else if (options && options.stack) {
-      wrapStyle = 'display:flex;flex-direction:column;gap:3px;';
-    }
     return `<div class="card static" style="align-items:stretch;cursor:default;height:100%;">
       <div class="top" style="width:100%;">
         <div class="name" style="margin-bottom:6px;">${escapeHtml(title)}</div>
-        <div class="${wrapClass}" style="${wrapStyle}">${content}</div>
+        <div>${content}</div>
       </div>
     </div>`;
   }
@@ -976,7 +988,9 @@ else
         </div>
       </div>`;
     const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(s.rarest));
-    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { stack: true });
+    const heatmapCard = (s.heatmap && Object.keys(s.heatmap).length)
+      ? cheevoInfoCard('активность за год', '<div id="cheevo-heatmap-cells"></div>')
+      : '';
     const topRow = `<div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">${summaryCard}</div>
       <div style="flex:1;min-width:220px;">${rarestCard}</div>
@@ -1310,6 +1324,7 @@ else
 
   window.addEventListener('resize', () => {
     if (document.getElementById('memoMasonryRoot')) memoLayout();
+    if (document.getElementById('cheevo-heatmap-cells')) cheevoFillHeatmap();
   });
 
   function memoOpenPostModal(post) {
@@ -1983,22 +1998,31 @@ LOGIN_STATE_TTL = 600         # 10 минут на прохождение вхо
 SESSIONS = {}       # session_id -> {"exp": ts, "email": str}
 LOGIN_STATES = {}   # state -> {"verifier": str, "exp": ts}
 
-# Простое ограничение частоты попыток входа по IP — без него /login и
-# /auth/callback можно было дёргать сколько угодно раз подряд без всякого
-# ограничения. Не заменяет fail2ban (тот банит на уровне firewall, здесь —
-# только на уровне приложения, в памяти процесса), но закрывает конкретно
-# этот путь атаки почти бесплатно.
-LOGIN_ATTEMPTS = {}   # ip -> [ts, ts, ...]
-LOGIN_RATE_LIMIT = 10       # попыток
+# Простое ограничение частоты попыток входа по IP — без него /auth/callback
+# можно было дёргать сколько угодно раз подряд без всякого ограничения. Не
+# заменяет fail2ban (тот банит на уровне firewall, здесь — только на уровне
+# приложения, в памяти процесса), но закрывает конкретно этот путь атаки
+# почти бесплатно. Считаем только РЕАЛЬНО неудачные попытки (истёкший
+# code/state, ошибка обмена у Pocket ID) — успешный вход в лимит не
+# засчитывается (раньше засчитывался, из-за чего обычный вход с телефона
+# и ноутбука подряд мог сам себя заблокировать без всякой атаки).
+LOGIN_ATTEMPTS = {}   # ip -> [ts, ts, ...] — только неудачные попытки
+LOGIN_RATE_LIMIT = 10       # неудачных попыток
 LOGIN_RATE_WINDOW = 300     # за 5 минут
 
 
-def check_login_rate_limit(ip):
+def is_login_rate_limited(ip):
+    now = time.time()
+    attempts = [t for t in LOGIN_ATTEMPTS.get(ip, []) if now - t < LOGIN_RATE_WINDOW]
+    LOGIN_ATTEMPTS[ip] = attempts
+    return len(attempts) >= LOGIN_RATE_LIMIT
+
+
+def record_login_failure(ip):
     now = time.time()
     attempts = [t for t in LOGIN_ATTEMPTS.get(ip, []) if now - t < LOGIN_RATE_WINDOW]
     attempts.append(now)
     LOGIN_ATTEMPTS[ip] = attempts
-    return len(attempts) <= LOGIN_RATE_LIMIT
 
 
 def _cleanup_expired():
@@ -2852,9 +2876,6 @@ class Handler(BaseHTTPRequestHandler):
             if not AUTH_ENABLED:
                 self._send_json({"error": "вход через Pocket ID не настроен — см. модуль NEXUS404, шаг 3"}, status=503)
                 return
-            if not check_login_rate_limit(self.client_address[0]):
-                self._send_json({"error": "слишком много попыток входа, подождите несколько минут"}, status=429)
-                return
             self._redirect(build_authorize_url())
             return
 
@@ -2862,16 +2883,18 @@ class Handler(BaseHTTPRequestHandler):
             if not AUTH_ENABLED:
                 self._send_json({"error": "вход через Pocket ID не настроен"}, status=503)
                 return
-            if not check_login_rate_limit(self.client_address[0]):
-                self._send_json({"error": "слишком много попыток входа, подождите несколько минут"}, status=429)
+            if is_login_rate_limited(self.client_address[0]):
+                self._send_json({"error": "слишком много неудачных попыток входа, подождите несколько минут"}, status=429)
                 return
             code = query.get("code", [None])[0]
             state = query.get("state", [None])[0]
             if not code or not state:
+                record_login_failure(self.client_address[0])
                 self._send_json({"error": "нет code/state в ответе Pocket ID"}, status=400)
                 return
             session_id, error = exchange_code_for_session(code, state)
             if error:
+                record_login_failure(self.client_address[0])
                 self._send_json({"error": error}, status=400)
                 return
             self._redirect("/", set_cookie=session_id)
