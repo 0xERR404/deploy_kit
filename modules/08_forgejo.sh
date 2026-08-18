@@ -1064,7 +1064,7 @@ if [ "$SSO_IS_ON" -eq 1 ]; then
 else
     echo "$(pad_field "Единый вход:" "$FIELD_WIDTH")не включён — обычный вход по логину+паролю"
 fi
-echo "$(pad_field "Карточка в хабе:" "$FIELD_WIDTH")widget 'forgejo-repos' (см. NEXUS404 Interface)"
+echo "$(pad_field "Карточка в хабе:" "$FIELD_WIDTH")widget 'forgejo-repos' (см. NEXUS404 Hub)"
 echo "$(pad_field "Пароль администратора:" "$FIELD_WIDTH")$FORGEJO_ADMIN_PASSWORD_FILE"
 echo "    (не выводится сюда, права 600)"
 echo ""

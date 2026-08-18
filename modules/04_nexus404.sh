@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Модуль: NEXUS404 Interface — свой хаб, замена Homer.
+# Модуль: NEXUS404 Hub — свой хаб, замена Homer.
 #
 # Ставится СРАЗУ ПОСЛЕ Pocket ID и ДО ntfy/Beszel/Vaultwarden/Forgejo/остальных
 # сервис-модулей — четвёртым пунктом меню (был перенесён сюда специально:
@@ -41,7 +41,7 @@
 enable_full_logging
 
 echo "${BOLD}${CYAN}==========================================================================="
-echo "  УСТАНОВКА NEXUS404 INTERFACE"
+echo "  УСТАНОВКА NEXUS404 HUB"
 echo "===========================================================================${NC}"
 
 TOTAL_STEPS=4
@@ -59,7 +59,7 @@ if is_done "step4_1"; then
     :
 else
     echo "${BOLD}${CYAN}==========================================================================="
-    echo "  ШАГ 1: Установка NEXUS404 Interface"
+    echo "  ШАГ 1: Установка NEXUS404 Hub"
     echo "===========================================================================${NC}"
 
     if ! check_disk_space 256; then
@@ -139,6 +139,7 @@ else
   .card .desc{ font-size:0.75rem; color:var(--muted); letter-spacing:0.02em; text-transform:uppercase; }
   .card .bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:4px; padding-top:4px; border-top:1px solid var(--line); gap:8px; }
   .card .badge{ font-size:0.55rem; padding:2px 10px; border-radius:10px; background:var(--line); color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em; transition:all 0.2s ease; white-space:nowrap; }
+  .card .ping{ font-size:0.55rem; font-weight:400; white-space:nowrap; }
 
   .section-title{ display:flex; align-items:center; font-size:0.75rem; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin:14px 0 10px; padding:10px 16px; min-height:46px; box-sizing:border-box; background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); text-shadow:0 0 12px rgba(255,204,102,0.25); overflow:hidden; }
   .empty-state{ color:var(--muted); font-size:0.8rem; padding:30px 0; text-align:center; border:1px dashed var(--line); border-radius:var(--card-radius); }
@@ -155,9 +156,9 @@ else
      строку, а не тычутся в кнопку "назад" впритык. */
   .service-overlay{ display:none; position:fixed; inset:0; z-index:1000; background:var(--bg); flex-direction:column; padding:clamp(16px, 4vw, 40px) clamp(12px, 3vw, 20px); box-sizing:border-box; }
   .service-overlay.open{ display:flex; }
-  .service-overlay-bar{ display:flex; flex-direction:column; gap:8px; padding:10px 16px; min-height:46px; box-sizing:border-box; border:1px solid var(--line); border-radius:var(--card-radius); background:var(--panel); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--amber); text-shadow:0 0 12px rgba(255,204,102,0.25); margin:14px 0 10px; }
-  .service-overlay-bar-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
-  .service-overlay-bar-top #overlayTitle{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .service-overlay-bar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 10px; padding:10px 16px; min-height:46px; box-sizing:border-box; border:1px solid var(--line); border-radius:var(--card-radius); background:var(--panel); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--amber); text-shadow:0 0 12px rgba(255,204,102,0.25); margin:14px 0 10px; }
+  .service-overlay-bar-left{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; row-gap:6px; min-width:0; flex:1; }
+  #overlayTitle{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .service-overlay-actions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
   .service-overlay-actions:empty{ display:none; }
   .service-overlay-bar .back{ background:none; border:1px solid var(--line); color:var(--text); padding:4px 14px; height:28px; box-sizing:border-box; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.75rem; display:flex; align-items:center; flex-shrink:0; }
@@ -197,35 +198,20 @@ else
   #memoEditorArea ul, #memoEditorArea ol{ margin:8px 0; padding-left:20px; }
   #memoImagePreview{ margin-top:10px; max-width:100%; max-height:140px; border-radius:6px; display:none; }
 
-  /* ===== WalletScope: сводка/курсы/операции — своя адаптивная сетка,
-     отдельная от .grid (у неё две ощутимо разные по смыслу колонки, а не
-     N одинаковых карточек), сужается до одной колонки раньше общей сетки,
-     чтобы крупные суммы не переносились криво. ===== */
-  .wallet-balances{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-bottom:16px; }
-  @media(max-width:520px){ .wallet-balances{ gap:8px; } }
-  .balance-card{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+  /* ===== WalletScope ===== */
   .balance-label{ font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); }
-  .balance-amount{ font-size:clamp(1.25rem, 5vw, 1.6rem); font-weight:600; overflow-wrap:break-word; }
-  .rates-row{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; margin-bottom:16px; }
-  @media(max-width:520px){ .rates-row{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  .balance-amount{ font-size:clamp(1.15rem, 4vw, 1.5rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
+  .rates-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
   .rate-chip{ border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px; min-width:0; }
   .rate-chip .sym{ color:var(--muted); font-size:0.65rem; text-transform:uppercase; }
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tx-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--line); flex-wrap:wrap; }
-  .tx-row:first-child{ border-top:none; }
-  .tx-desc{ flex:1; min-width:120px; }
-  .tx-desc .title{ font-size:0.85rem; overflow-wrap:break-word; }
-  .tx-desc .meta{ font-size:0.7rem; color:var(--muted); margin-top:2px; }
-  .tx-amount{ font-size:0.9rem; font-weight:600; white-space:nowrap; }
   .tx-amount.income{ color:var(--green); }
   .tx-amount.expense{ color:var(--red); }
-  .tx-row .actions{ display:flex; gap:4px; opacity:0.5; flex-shrink:0; }
-  .tx-row:hover .actions{ opacity:1; }
 
   /* ===== MemoScope: посты ===== */
   .memo-columns{ display:flex; gap:14px; align-items:flex-start; }
   .memo-col{ display:flex; flex-direction:column; gap:14px; flex:1; min-width:0; }
-  .memo-post img{ width:100%; border-radius:6px; margin-bottom:10px; display:block; object-fit:cover; max-height:220px; }
+  .memo-post img{ width:100%; height:auto; border-radius:6px; margin-bottom:10px; display:block; }
   .memo-post .post-date{ font-size:0.65rem; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
   .memo-post .post-body{ font-size:0.85rem; line-height:1.55; overflow-wrap:break-word; }
   .memo-post .post-body h1{ font-size:1.1rem; margin:0 0 8px; color:var(--text); }
@@ -238,12 +224,14 @@ else
     .prompt .cmd{ display:none; }
     .status-indicator{ font-size:0.66rem; gap:5px; }
     .title-block{ padding-left:10px; }
-    .section-title, .service-overlay-bar{ font-size:0.65rem; }
+    .section-title, .service-overlay-bar{ font-size:0.6rem; }
     .card{ padding:12px 12px 8px; min-height:110px; }
     .card .name{ font-size:0.8rem; }
     .card .desc{ font-size:0.68rem; }
-    .back-full{ display:none; }
-    .service-overlay-bar #overlayActions button{ font-size:0.6rem !important; padding:3px 6px !important; }
+    .service-overlay-bar{ padding:8px 10px; gap:6px 8px; }
+    .service-overlay-bar-left{ gap:6px; row-gap:4px; }
+    .service-overlay-bar .back{ padding:4px 10px; font-size:0.65rem; }
+    .service-overlay-bar #overlayActions button{ font-size:0.58rem !important; padding:3px 5px !important; }
   }
   @media(max-width:420px){
     .metrics-row{ flex-wrap:nowrap; }
@@ -264,7 +252,7 @@ else
   </div>
   <div class="title-block">
     <div class="brand"><span class="highlight">NEXUS404</span></div>
-    <span class="sub">interface</span>
+    <span class="sub">hub</span>
   </div>
   <div id="groups"></div>
   <div class="metrics-row">
@@ -285,14 +273,14 @@ else
     </div>
     <div class="title-block">
       <div class="brand"><span class="highlight">NEXUS404</span></div>
-      <span class="sub">interface</span>
+      <span class="sub">hub</span>
     </div>
     <div class="service-overlay-bar">
-      <div class="service-overlay-bar-top">
+      <div class="service-overlay-bar-left">
         <span id="overlayTitle">СЕРВИС</span>
-        <button class="back" onclick="closeOverlay()">← назад<span class="back-full"> в NEXUS404</span></button>
+        <div id="overlayActions" class="service-overlay-actions"></div>
       </div>
-      <div id="overlayActions" class="service-overlay-actions"></div>
+      <button class="back" onclick="closeOverlay()">← назад</button>
     </div>
     <div id="overlayBody" style="flex:1; overflow-y:auto;"></div>
     <footer><span class="js-footer-brand">NEXUS404</span> © <span class="js-year">2026</span></footer>
@@ -407,6 +395,7 @@ else
         </div>
         <div class="bottom">
           <span class="badge" style="background:var(--line);color:var(--muted);">${escapeHtml(badgeLabel)}</span>
+          <span class="ping"></span>
         </div>
       </div>
     `;
@@ -414,7 +403,11 @@ else
 
   // Подтягивает краткую сводку в каждую карточку-виджет на главном экране —
   // не весь виджет, только одна строка (число/статус), чтобы не заходить
-  // внутрь ради простого взгляда "всё ли в порядке".
+  // внутрь ради простого взгляда "всё ли в порядке". online/ping_ms (если
+  // есть в ответе — только у "сервисов", у собственных виджетов такого
+  // понятия нет) меряются прямо в бэкенде хаба, при том же самом запросе,
+  // которым он и так уже ходит за данными — отдельного пинга не нужно
+  // (сервисы внутренние, из браузера напрямую всё равно недостижимы).
   async function loadCardPreviews(groups) {
     const items = groups.flatMap(g => g.items).filter(i => i.mode === 'widget' && i.widget);
     for (const item of items) {
@@ -422,10 +415,23 @@ else
         const res = await fetch(`/api/widgets/${item.widget}`, { cache: 'no-store' });
         const data = await res.json();
         const card = document.querySelector(`.card[data-widget="${item.widget}"] .card-preview`);
-        if (!card) continue;
-        if (data.error) { card.innerHTML = ''; continue; }
-        const lines = summarizeWidget(item.widget, data);
-        card.innerHTML = lines.map(line => `<div style="color:var(--accent);font-size:0.8rem;">${escapeHtml(line)}</div>`).join('');
+        const pingEl = document.querySelector(`.card[data-widget="${item.widget}"] .ping`);
+        if (card) {
+          if (data.error) {
+            card.innerHTML = '';
+          } else {
+            const lines = summarizeWidget(item.widget, data);
+            card.innerHTML = lines.map(line => `<div style="color:var(--accent);font-size:0.8rem;">${escapeHtml(line)}</div>`).join('');
+          }
+        }
+        if (pingEl) {
+          if (typeof data.online === 'boolean') {
+            pingEl.textContent = data.online ? (data.ping_ms != null ? `${data.ping_ms}ms` : 'online') : 'offline';
+            pingEl.style.color = data.online ? 'var(--green)' : 'var(--red)';
+          } else {
+            pingEl.textContent = '';
+          }
+        }
       } catch (e) { /* тихо — это необязательное превью, не основная функция */ }
     }
   }
@@ -458,9 +464,9 @@ else
       return [`${repos.length} репозитори${repos.length === 1 ? 'й' : 'ев'}`, formatKb(totalKb) + ' всего'];
     }
     if (widgetId === 'cheevoscope-stats') {
-      const s = d.steam || {};
-      if (!s.games_count) return [];
-      return [`${s.games_count} игр, ${s.total_hours}ч`, `ачивок: ${s.achievements_overall_percent ?? 0}%`];
+      const sum = (d.steam && d.steam.summary) || {};
+      if (!sum.games_count) return [];
+      return [`${sum.games_count} игр, ${sum.total_hours ?? 0}ч`, `ачивок: ${sum.achievements_overall_percent ?? 0}%`];
     }
     if (widgetId === 'walletscope-data') {
       return [`карта: ${formatRub(d.card)}`, `депозит: ${formatRub(d.deposit)}`];
@@ -468,7 +474,8 @@ else
     if (widgetId === 'memoscope-posts') {
       const posts = d.posts || [];
       if (!posts.length) return [];
-      return [`постов: ${posts.length}`];
+      const sorted = [...posts].sort((a, b) => b.id - a.id);
+      return [`постов: ${posts.length}`, `посл.: ${sorted[0].date}`];
     }
     return [];
   }
@@ -574,7 +581,7 @@ else
       if (!d.systems || d.systems.length === 0) {
         return `<div class="widget-placeholder">систем в Beszel пока нет</div>`;
       }
-      return `<div class="widget-body"><div class="grid stack-grid">${d.systems.map(sys => {
+      return `<div class="widget-body"><div class="grid">${d.systems.map(sys => {
         const netKb = sys.network_bytes_recent ? (sys.network_bytes_recent / 1024).toFixed(1) : '0';
         return `
           <div class="card static" style="align-items:stretch;cursor:default;">
@@ -591,7 +598,7 @@ else
       }).join('')}</div></div>`;
     }
     if (widgetId === 'vaultwarden-meta') {
-      return `<div class="widget-body"><div class="grid stack-grid">
+      return `<div class="widget-body"><div class="grid">
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">vaultwarden</div>
@@ -745,8 +752,8 @@ else
     const actionsEl = document.getElementById('overlayActions');
     if (actionsEl) {
       actionsEl.innerHTML = `
-        <button onclick="refreshCheevoscope('quick')" style="font-size:0.65rem;color:var(--accent);background:none;border:1px solid var(--line);padding:3px 8px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">обновить</button>
-        <button onclick="refreshCheevoscope('full')" style="font-size:0.65rem;color:var(--muted);background:none;border:1px solid var(--line);padding:3px 8px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">обновить всё</button>
+        <button onclick="refreshCheevoscope('quick')" title="Быстрое обновление (список игр + достижения)" style="font-size:0.8rem;color:var(--accent);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻</button>
+        <button onclick="refreshCheevoscope('full')" title="Полное обновление (+ цены, отзывы, картинки)" style="font-size:0.8rem;color:var(--muted);background:none;border:1px solid var(--line);padding:3px 9px;height:24px;border-radius:6px;cursor:pointer;font-family:inherit;white-space:nowrap;">↻+</button>
         <span id="cheevo-refresh-status" style="font-size:0.6rem;color:var(--muted);white-space:nowrap;"></span>
       `;
     }
@@ -778,22 +785,22 @@ else
 
   function cheevoRows(pairs) {
     return pairs.map(([k, v]) => `
-      <div style="border-top:1px solid var(--line);padding-top:6px;display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted);"><span>${k}</span><span style="color:var(--text);">${v}</span></div>
+      <div style="border-top:1px solid var(--line);padding-top:4px;display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);"><span>${k}</span><span style="color:var(--text);">${v}</span></div>
     `).join('');
   }
 
   function cheevoRarityChips(tiers) {
     if (!tiers || !tiers.total_rated) return '';
     const chips = Object.entries(tiers.counts || {}).map(([tier, count]) => `
-      <div style="font-size:0.65rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 8px;">${escapeHtml(tier)}: <span style="color:var(--text);">${count}</span></div>
+      <div style="font-size:0.6rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 6px;">${escapeHtml(tier)}: <span style="color:var(--text);">${count}</span></div>
     `).join('');
-    return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;">${chips}</div>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 0;">${chips}</div>`;
   }
 
   function cheevoHeatmap(heatmap) {
     const counts = heatmap || {};
     if (!Object.keys(counts).length) return '';
-    const days = 84;
+    const days = 365;
     const today = new Date();
     const cells = [];
     for (let i = days - 1; i >= 0; i--) {
@@ -807,13 +814,13 @@ else
     const weeks = [];
     for (let w = 0; w < Math.ceil(days / 7); w++) weeks.push(cells.slice(w * 7, w * 7 + 7));
     return weeks.map(week => `
-      <div style="display:flex;flex-direction:column;gap:3px;">${week.map(n => `<div style="width:10px;height:10px;border-radius:2px;background:${colors[level(n)]};"></div>`).join('')}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;">${week.map(n => `<div style="width:8px;height:8px;border-radius:2px;background:${colors[level(n)]};"></div>`).join('')}</div>
     `).join('');
   }
 
   function cheevoRarestList(rarest) {
     if (!rarest || !rarest.length) return '';
-    return rarest.map(a => `<div style="font-size:0.75rem;color:var(--text);border-top:1px solid var(--line);padding-top:6px;margin-top:6px;">${escapeHtml(a.name || a.achievement || '')}<div style="color:var(--muted);font-size:0.7rem;margin-top:2px;">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`).join('');
+    return rarest.map(a => `<div style="font-size:0.72rem;color:var(--text);border-top:1px solid var(--line);padding-top:4px;margin-top:4px;">${escapeHtml(a.name || a.achievement || '')}<div style="color:var(--muted);font-size:0.65rem;margin-top:1px;">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`).join('');
   }
 
   // Карточка с заголовком в том же стиле, что и остальные карточки хаба —
@@ -821,11 +828,11 @@ else
   // голым текстом на фоне, а смотрелись как часть общей сетки.
   function cheevoInfoCard(title, content, options) {
     if (!content) return '';
-    const wrapStyle = options && options.scrollX ? 'display:flex;gap:3px;overflow-x:auto;' : '';
+    const wrapStyle = options && options.scrollX ? 'display:flex;gap:2px;overflow-x:auto;' : '';
     const wrapClass = options && options.scrollX ? 'no-scrollbar' : '';
     return `<div class="card static" style="align-items:stretch;cursor:default;">
       <div class="top" style="width:100%;">
-        <div class="name" style="margin-bottom:10px;">${escapeHtml(title)}</div>
+        <div class="name" style="margin-bottom:6px;">${escapeHtml(title)}</div>
         <div class="${wrapClass}" style="${wrapStyle}">${content}</div>
       </div>
     </div>`;
@@ -931,7 +938,7 @@ else
           ${cheevoRarityChips(s.rarity_tiers)}
         </div>
       </div>`;
-    const heatmapCard = cheevoInfoCard('активность за 12 недель', cheevoHeatmap(s.heatmap), { scrollX: true });
+    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { scrollX: true });
     const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(s.rarest));
     const topRow = `<div class="grid" style="margin-bottom:14px;">${summaryCard}${heatmapCard}${rarestCard}</div>`;
     const games = s.games || [];
@@ -1055,51 +1062,51 @@ else
         <span class="val">${val == null ? '—' : (isRub ? formatRub(val) : val)}</span>
       </div>`;
     const sorted = [...(d.transactions || [])].sort((a, b) => b.id - a.id);
-    const txRows = sorted.map(tx => `
-      <div class="tx-row">
-        <div class="tx-desc">
-          <div class="title">${escapeHtml(tx.desc)}</div>
-          <div class="meta">${escapeHtml(tx.date)}</div>
+    const txCards = sorted.map(tx => `
+      <div class="card static" style="align-items:stretch;cursor:default;">
+        <div class="top" style="width:100%;">
+          <div class="name" style="white-space:normal;overflow-wrap:break-word;">${escapeHtml(tx.desc)}</div>
+          <div class="desc">${escapeHtml(tx.date)}</div>
+          <div class="tx-amount ${tx.type}" style="margin-top:8px;font-size:1rem;">${tx.type === 'income' ? '+' : '−'}${formatRub(tx.amount)}</div>
         </div>
-        <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '−'}${formatRub(tx.amount)}</div>
-        <div class="actions">
+        <div class="bottom" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px;justify-content:flex-end;gap:6px;">
           <button onclick="walletEditTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎</button>
           <button onclick="walletDeleteTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕</button>
         </div>
       </div>`).join('');
 
     return `<div class="widget-body">
-      <div class="card static" style="align-items:stretch;cursor:default;margin-bottom:14px;">
-        <div class="top" style="width:100%;">
-          <div class="wallet-balances">
-            <div class="balance-card">
-              <div class="balance-label">Карта</div>
-              <div class="balance-amount">${formatRub(d.card)}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button onclick="walletOpenTxModal('income')" style="font-size:0.7rem;color:var(--green);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">+ доход</button>
-                <button onclick="walletOpenTxModal('expense')" style="font-size:0.7rem;color:var(--red);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">− расход</button>
-              </div>
-            </div>
-            <div class="balance-card">
-              <div class="balance-label">Депозит</div>
-              <div class="balance-amount">${formatRub(d.deposit)}</div>
-              <div><button onclick="walletOpenTransferModal()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">→ на депозит</button></div>
+      <div class="grid" style="margin-bottom:14px;">
+        <div class="card static" style="align-items:stretch;cursor:default;">
+          <div class="top" style="width:100%;">
+            <div class="balance-label">Карта</div>
+            <div class="balance-amount">${formatRub(d.card)}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+              <button onclick="walletOpenTxModal('income')" style="font-size:0.7rem;color:var(--green);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">+ доход</button>
+              <button onclick="walletOpenTxModal('expense')" style="font-size:0.7rem;color:var(--red);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">− расход</button>
             </div>
           </div>
-          <div class="rates-row">
-            ${rateChip('USD', rates.usd, true)}
-            ${rateChip('EUR', rates.eur, true)}
-            ${rateChip('BTC', rates.btc, true)}
-            ${rateChip('ETH', rates.eth, true)}
+        </div>
+        <div class="card static" style="align-items:stretch;cursor:default;">
+          <div class="top" style="width:100%;">
+            <div class="rates-grid">
+              ${rateChip('USD', rates.usd, true)}
+              ${rateChip('EUR', rates.eur, true)}
+              ${rateChip('BTC', rates.btc, true)}
+              ${rateChip('ETH', rates.eth, true)}
+            </div>
+          </div>
+        </div>
+        <div class="card static" style="align-items:stretch;cursor:default;">
+          <div class="top" style="width:100%;">
+            <div class="balance-label">Депозит</div>
+            <div class="balance-amount">${formatRub(d.deposit)}</div>
+            <div style="margin-top:8px;"><button onclick="walletOpenTransferModal()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">→ на депозит</button></div>
           </div>
         </div>
       </div>
-      <div class="card static" style="align-items:stretch;cursor:default;">
-        <div class="top" style="width:100%;">
-          <div class="name" style="margin-bottom:8px;">операции</div>
-          <div>${txRows || '<div class="widget-placeholder">записей пока нет</div>'}</div>
-        </div>
-      </div>
+      <div class="name" style="margin-bottom:8px;">операции</div>
+      <div class="grid">${txCards || '<div class="widget-placeholder">записей пока нет</div>'}</div>
     </div>`;
   }
 
@@ -1625,7 +1632,7 @@ iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAMJUlEQVR42u2de3BU1R3Hz++c+9jdJBAS
 ICONMASK192EOF
         cat > "$HUB_DIR/html/manifest.json" << 'MANIFESTEOF'
 {
-  "name": "NEXUS404 Interface",
+  "name": "NEXUS404 Hub",
   "short_name": "NEXUS404",
   "start_url": ".",
   "display": "standalone",
@@ -1756,7 +1763,7 @@ SHAREDEOF
     cat > "$HUB_DIR/backend/app.py" << 'PYEOF'
 #!/usr/bin/env python3
 """
-NEXUS404 Interface — backend хаба. Только стандартная библиотека Python
+NEXUS404 Hub — backend хаба. Только стандартная библиотека Python
 (без pip-зависимостей — образ python:3.12-alpine, ничего доустанавливать
 не нужно, контейнер стартует мгновенно).
 
@@ -2042,6 +2049,7 @@ def widget_beszel():
     # по имени — стабильный, не "последний обновившийся" (перескакивал бы
     # местами между запросами).
     url = f"{BESZEL_API}/api/collections/systems/records?perPage=50&sort=name"
+    _t0 = time.time()
     try:
         status, body = http_get(url, headers={"Authorization": token})
     except urllib.error.HTTPError as e:
@@ -2058,6 +2066,7 @@ def widget_beszel():
                 if new_token:
                     with open(BESZEL_TOKEN_FILE, "w") as f:
                         f.write(new_token)
+                    _t0 = time.time()
                     status, body = http_get(url, headers={"Authorization": new_token})
                 else:
                     return {"error": "токен Beszel истёк, обновить не удалось — перезайдите в шаг 2 модуля Beszel"}
@@ -2065,8 +2074,9 @@ def widget_beszel():
                 return {"error": "токен Beszel истёк, обновить не удалось — перезайдите в шаг 2 модуля Beszel"}
         else:
             return {"error": f"Beszel API вернул ошибку HTTP {e.code}"}
-    except Exception as e:
-        return {"error": f"не удалось достучаться до Beszel: {e}"}
+    except Exception:
+        return {"systems": [], "online": False}
+    ping_ms = round((time.time() - _t0) * 1000)
 
     try:
         items = json.loads(body).get("items", [])
@@ -2090,7 +2100,7 @@ def widget_beszel():
             # "скорость".
             "network_bytes_recent": info.get("bb", 0),
         })
-    return {"systems": systems}
+    return {"systems": systems, "online": True, "ping_ms": ping_ms}
 
 
 # ============================================================
@@ -2110,10 +2120,10 @@ def widget_vaultwarden():
             cur.execute("SELECT COUNT(*) FROM ciphers WHERE deleted_at IS NULL")
             items = cur.fetchone()[0]
             conn.close()
-            return {"users": users, "items": items}
+            return {"users": users, "items": items, "online": True}
         except sqlite3.OperationalError:
             time.sleep(0.3)
-    return {"error": "база данных Vaultwarden временно занята — попробуйте обновить чуть позже"}
+    return {"users": 0, "items": 0, "online": False}
 
 
 # ============================================================
@@ -2126,10 +2136,12 @@ def widget_ntfy():
         return {"error": "ntfy ещё не установлен или не сохранил токен/топик"}
 
     url = f"{NTFY_API}/{topic}/json?poll=1&since=24h"
+    _t0 = time.time()
     try:
         status, body = http_get(url, headers={"Authorization": f"Bearer {token}"})
-    except Exception as e:
-        return {"error": f"не удалось достучаться до ntfy: {e}"}
+    except Exception:
+        return {"messages": [], "online": False}
+    ping_ms = round((time.time() - _t0) * 1000)
 
     messages = []
     deleted_ids = set()
@@ -2158,7 +2170,7 @@ def widget_ntfy():
             })
     messages = [m for m in messages if m["id"] not in deleted_ids]
     messages.sort(key=lambda m: m["time"], reverse=True)
-    return {"messages": messages[:10]}
+    return {"messages": messages[:10], "online": True, "ping_ms": ping_ms}
 
 
 def widget_ntfy_delete(msg_id):
@@ -2194,10 +2206,12 @@ def widget_forgejo():
         return {"error": "нет сохранённого токена Forgejo — пройдите шаг 8 модуля Forgejo заново"}
 
     url = f"{FORGEJO_API}/api/v1/user/repos?limit=50"
+    _t0 = time.time()
     try:
         status, body = http_get(url, headers={"Authorization": f"token {token}"})
-    except Exception as e:
-        return {"error": f"не удалось достучаться до Forgejo: {e}"}
+    except Exception:
+        return {"repos": [], "online": False}
+    ping_ms = round((time.time() - _t0) * 1000)
 
     try:
         repos = json.loads(body)
@@ -2216,7 +2230,7 @@ def widget_forgejo():
             "html_url": r.get("html_url", ""),
         }
         for r in repos
-    ]}
+    ], "online": True, "ping_ms": ping_ms}
 
 
 def forgejo_download_proxy(full_name, handler):
@@ -2989,7 +3003,7 @@ EOF
 
     # Порт наружу НЕ публикуется — единственный путь снаружи идёт через
     # Caddy (шаг 2), изнутри — по имени контейнера dk_nexus404:80.
-    run_spinner "Запуск NEXUS404 Interface" "dk_compose_up '$HUB_DIR'"
+    run_spinner "Запуск NEXUS404 Hub" "dk_compose_up '$HUB_DIR'"
     # "docker compose up -d" НЕ перезапускает уже работающий контейнер,
     # если сама конфигурация compose не изменилась — а файлы внутри
     # bind-mount (html/backend/data) при этом сравнении не учитываются
@@ -3115,9 +3129,9 @@ else
     echo "===========================================================================${NC}"
 
     CHECK_FAILED=0
-    echo "===== Результаты финальной проверки модуля NEXUS404 Interface ($(date '+%Y-%m-%d %H:%M:%S')) =====" >> "$LOGFILE"
+    echo "===== Результаты финальной проверки модуля NEXUS404 Hub ($(date '+%Y-%m-%d %H:%M:%S')) =====" >> "$LOGFILE"
 
-    check_item "Контейнер NEXUS404 Interface запущен" bash -c "docker ps --format '{{.Names}}' | grep -qx dk_nexus404"
+    check_item "Контейнер NEXUS404 Hub запущен" bash -c "docker ps --format '{{.Names}}' | grep -qx dk_nexus404"
     check_item "index.html существует" test -s "$HUB_DIR/html/index.html"
     check_item "backend/app.py существует" test -s "$HUB_DIR/backend/app.py"
     check_item "PWA-манифест существует" test -s "$HUB_DIR/html/manifest.json"
@@ -3152,7 +3166,7 @@ fi
 
 echo ""
 echo "${BOLD}${CYAN}==========================================================================="
-echo "  NEXUS404 Interface настроен — сохраните эту информацию."
+echo "  NEXUS404 Hub настроен — сохраните эту информацию."
 echo "===========================================================================${NC}"
 DK_ROOT_DOMAIN_NOW=$(read_or_default "$DOMAINFILE" "")
 if [ -n "$DK_ROOT_DOMAIN_NOW" ]; then

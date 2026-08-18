@@ -614,7 +614,7 @@ if [ "$SSO_IS_ON" -eq 1 ]; then
 else
     echo "$(pad_field "Единый вход:" "$FIELD_WIDTH")не включён — обычный вход по email+мастер-пароль (в приложении)"
 fi
-echo "$(pad_field "Карточка в хабе:" "$FIELD_WIDTH")widget 'vaultwarden-meta' (см. NEXUS404 Interface)"
+echo "$(pad_field "Карточка в хабе:" "$FIELD_WIDTH")widget 'vaultwarden-meta' (см. NEXUS404 Hub)"
 echo "$(pad_field "Токен admin-панели:" "$FIELD_WIDTH")$VAULT_ADMIN_TOKEN_FILE"
 echo "    (не выводится сюда, права 600)"
 echo "$(pad_field "Примечание:" "$FIELD_WIDTH")в логах будет предупреждение про ADMIN_TOKEN"

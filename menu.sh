@@ -53,7 +53,7 @@ MENU_ITEMS=(
     "Базовая настройка сервера|$MODULES_DIR/01_base_setup.sh"
     "Docker + Docker Compose + Caddy|$MODULES_DIR/02_docker_caddy.sh"
     "Pocket ID (аутентификация, единый вход)|$MODULES_DIR/03_pocketid.sh"
-    "NEXUS404 Interface (хаб)|$MODULES_DIR/04_nexus404.sh"
+    "NEXUS404 Hub (хаб)|$MODULES_DIR/04_nexus404.sh"
     "ntfy (пуш-уведомления)|$MODULES_DIR/05_ntfy.sh"
     "Beszel (мониторинг ресурсов)|$MODULES_DIR/06_beszel.sh"
     "Vaultwarden (менеджер паролей)|$MODULES_DIR/07_vaultwarden.sh"

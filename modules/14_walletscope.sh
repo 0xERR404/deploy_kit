@@ -28,7 +28,7 @@ fi
 echo ""
 
 if ! [ -d "$HUB_DIR" ]; then
-    echo "${RED}[!]${NC} Хаб (NEXUS404 Interface) не установлен — сначала пройдите пункт 4 меню"
+    echo "${RED}[!]${NC} Хаб (NEXUS404 Hub) не установлен — сначала пройдите пункт 4 меню"
     exit 1
 fi
 

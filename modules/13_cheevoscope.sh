@@ -28,7 +28,7 @@ fi
 echo ""
 
 if ! [ -d "$HUB_DIR" ]; then
-    echo "${RED}[!]${NC} Хаб (NEXUS404 Interface) не установлен — сначала пройдите пункт 4 меню"
+    echo "${RED}[!]${NC} Хаб (NEXUS404 Hub) не установлен — сначала пройдите пункт 4 меню"
     exit 1
 fi
 
@@ -808,7 +808,7 @@ def _cheevo_collect_unlocked_rarity_candidates(achievements_data):
     return candidates
 
 
-def cheevo_compute_rarest_achievements(achievements_data, games, top_n=10):
+def cheevo_compute_rarest_achievements(achievements_data, games, top_n=5):
     """Топ-N самых редких открытых ачивок по всей библиотеке разом."""
     name_by_appid = {g["appid"]: g.get("name", f"appid {g['appid']}") for g in games}
     candidates = _cheevo_collect_unlocked_rarity_candidates(achievements_data)
@@ -1452,7 +1452,7 @@ def cheevo_ra_generate_report(profile, progress_list, awards, recent, game_detai
     ]
 
     rarity_candidates.sort(key=lambda c: c["global_percent"])
-    rarest_achievements = rarity_candidates[:10]
+    rarest_achievements = rarity_candidates[:5]
     rarity_tiers = cheevo_compute_rarity_tiers(rarity_candidates)
 
     if not game_details:
