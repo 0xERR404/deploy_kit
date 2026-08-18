@@ -211,13 +211,11 @@ else
   /* ===== MemoScope: посты ===== */
   .memo-columns{ display:flex; gap:14px; align-items:flex-start; }
   .memo-col{ display:flex; flex-direction:column; gap:14px; flex:1; min-width:0; }
-  .memo-post img{ width:100%; height:auto; border-radius:6px; margin-bottom:10px; display:block; }
   .memo-post .post-date{ font-size:0.65rem; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
   .memo-post .post-body{ font-size:0.85rem; line-height:1.55; overflow-wrap:break-word; }
   .memo-post .post-body h1{ font-size:1.1rem; margin:0 0 8px; color:var(--text); }
   .memo-post .post-body h2{ font-size:1rem; margin:0 0 8px; color:var(--text); }
   .memo-post .post-body ul, .memo-post .post-body ol{ margin:8px 0; padding-left:20px; }
-  .memo-post .post-actions{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
 
   @media(max-width:600px){
     .header-row{ gap:6px 10px; }
@@ -336,6 +334,10 @@ else
 
 <script>
   let currentCards = [];
+  // Самописные виджеты (без отдельного сервера под ними) — используется и
+  // в renderGroups (деление на секции), и в loadCardPreviews (у них нет
+  // понятия online/offline, в отличие от "сервисов").
+  const OWN_WIDGET_IDS = ['walletscope-data', 'memoscope-posts', 'cheevoscope-stats'];
 
   async function loadCards() {
     try {
@@ -368,7 +370,6 @@ else
     // три одинаково живут прямо внутри хаба, без отдельного контейнера
     // (Cheevoscope раньше был исключением из-за requests/python-dotenv, не
     // stdlib — перенесён на urllib, технический долг устранён).
-    const OWN_WIDGET_IDS = ['walletscope-data', 'memoscope-posts', 'cheevoscope-stats'];
     const services = allItems.filter(i => !OWN_WIDGET_IDS.includes(i.widget));
     const ownWidgets = allItems.filter(i => OWN_WIDGET_IDS.includes(i.widget));
 
@@ -385,8 +386,11 @@ else
   function renderCard(item, badgeLabel) {
     const safeName = escapeHtml(item.name);
     const widget = escapeHtml(item.widget || '');
+    const isService = !OWN_WIDGET_IDS.includes(item.widget);
+    const initialBadge = isService ? 'checking...' : escapeHtml(badgeLabel);
+    const initialBadgeStyle = isService ? 'background:rgba(255,204,102,0.1);color:var(--amber);' : 'background:var(--line);color:var(--muted);';
     return `
-      <div class="card" data-widget="${widget}"
+      <div class="card" data-widget="${widget}" data-service="${isService ? '1' : '0'}"
            onclick="openService('${safeName}', '${widget}')">
         <div class="top">
           <div class="name">${safeName}</div>
@@ -394,7 +398,7 @@ else
           <div class="card-preview" style="margin-top:4px;display:flex;flex-direction:column;gap:2px;"></div>
         </div>
         <div class="bottom">
-          <span class="badge" style="background:var(--line);color:var(--muted);">${escapeHtml(badgeLabel)}</span>
+          <span class="badge" style="${initialBadgeStyle}">${initialBadge}</span>
           <span class="ping"></span>
         </div>
       </div>
@@ -415,6 +419,7 @@ else
         const res = await fetch(`/api/widgets/${item.widget}`, { cache: 'no-store' });
         const data = await res.json();
         const card = document.querySelector(`.card[data-widget="${item.widget}"] .card-preview`);
+        const badgeEl = document.querySelector(`.card[data-widget="${item.widget}"] .badge`);
         const pingEl = document.querySelector(`.card[data-widget="${item.widget}"] .ping`);
         if (card) {
           if (data.error) {
@@ -424,13 +429,23 @@ else
             card.innerHTML = lines.map(line => `<div style="color:var(--accent);font-size:0.8rem;">${escapeHtml(line)}</div>`).join('');
           }
         }
-        if (pingEl) {
+        // Бейдж "online"/"offline" — только у "сервисов" (см. OWN_WIDGET_IDS),
+        // у собственных виджетов (WalletScope/MemoScope/Cheevoscope) такого
+        // понятия нет — их бейдж остаётся статичным "виджет".
+        if (badgeEl && !OWN_WIDGET_IDS.includes(item.widget)) {
           if (typeof data.online === 'boolean') {
-            pingEl.textContent = data.online ? (data.ping_ms != null ? `${data.ping_ms}ms` : 'online') : 'offline';
-            pingEl.style.color = data.online ? 'var(--green)' : 'var(--red)';
+            badgeEl.textContent = data.online ? 'online' : 'offline';
+            badgeEl.style.background = data.online ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.15)';
+            badgeEl.style.color = data.online ? 'var(--green)' : 'var(--red)';
           } else {
-            pingEl.textContent = '';
+            badgeEl.textContent = 'checking...';
+            badgeEl.style.background = 'rgba(255,204,102,0.1)';
+            badgeEl.style.color = 'var(--amber)';
           }
+        }
+        if (pingEl) {
+          pingEl.textContent = (data.online && data.ping_ms != null) ? `${data.ping_ms}ms` : '';
+          pingEl.style.color = 'var(--muted)';
         }
       } catch (e) { /* тихо — это необязательное превью, не основная функция */ }
     }
@@ -557,6 +572,8 @@ else
   // такт, оставляя последние известные данные на экране, а не заменяя их
   // сообщением об ошибке — единичный неудачный опрос не повод стирать то,
   // что человек уже видит.
+  let currentOpenWidgetId = null;
+
   async function loadWidget(widgetId, container, silent) {
     let data;
     try {
@@ -572,6 +589,7 @@ else
       container.innerHTML = `<div class="widget-placeholder">${escapeHtml(data.error)}</div>`;
       return;
     }
+    currentOpenWidgetId = widgetId;
     container.innerHTML = renderWidget(widgetId, data);
     if (widgetId === 'memoscope-posts') memoLayout();
   }
@@ -814,7 +832,7 @@ else
     const weeks = [];
     for (let w = 0; w < Math.ceil(days / 7); w++) weeks.push(cells.slice(w * 7, w * 7 + 7));
     return weeks.map(week => `
-      <div style="display:flex;flex-direction:column;gap:2px;">${week.map(n => `<div style="width:8px;height:8px;border-radius:2px;background:${colors[level(n)]};"></div>`).join('')}</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">${week.map(n => `<div style="width:13px;height:13px;border-radius:3px;background:${colors[level(n)]};"></div>`).join('')}</div>
     `).join('');
   }
 
@@ -828,8 +846,13 @@ else
   // голым текстом на фоне, а смотрелись как часть общей сетки.
   function cheevoInfoCard(title, content, options) {
     if (!content) return '';
-    const wrapStyle = options && options.scrollX ? 'display:flex;gap:2px;overflow-x:auto;' : '';
-    const wrapClass = options && options.scrollX ? 'no-scrollbar' : '';
+    let wrapStyle = '', wrapClass = '';
+    if (options && options.scrollX) {
+      wrapStyle = 'display:flex;gap:2px;overflow-x:auto;';
+      wrapClass = 'no-scrollbar';
+    } else if (options && options.wrap) {
+      wrapStyle = 'display:flex;flex-wrap:wrap;gap:4px;';
+    }
     return `<div class="card static" style="align-items:stretch;cursor:default;">
       <div class="top" style="width:100%;">
         <div class="name" style="margin-bottom:6px;">${escapeHtml(title)}</div>
@@ -922,25 +945,29 @@ else
   function renderCheevoSteamTab(s) {
     s = s || {};
     const sum = s.summary || {};
+    const statBlock = (value, label, color) => `
+      <div>
+        <div style="font-size:1.35rem;font-weight:600;color:${color || 'var(--text)'};">${value}</div>
+        <div class="balance-label" style="margin-top:2px;">${label}</div>
+      </div>`;
     const summaryCard = `
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
-          <div class="name" style="margin-bottom:8px;">steam</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            ${cheevoRows([
-              ['игр в библиотеке', sum.games_count ?? 0],
-              ['наиграно часов', sum.total_hours ?? 0],
-              ['ачивок', `${sum.achievements_unlocked_total ?? 0}/${sum.achievements_available_total ?? 0} (${sum.achievements_overall_percent ?? 0}%)`],
-              ['пройдено на 100%', sum.games_completed_100 ?? 0],
-              ['стоимость библ.', `$${sum.library_cost_usd ?? 0}`],
-            ])}
+          <div class="name" style="margin-bottom:10px;">steam</div>
+          <div style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;">
+            ${statBlock(sum.games_count ?? 0, 'игр в библиотеке')}
+            ${statBlock(`${sum.total_hours ?? 0}ч`, 'наиграно часов')}
+            ${statBlock(`${sum.achievements_overall_percent ?? 0}%`, `ачивок: ${sum.achievements_unlocked_total ?? 0}/${sum.achievements_available_total ?? 0}`, 'var(--accent)')}
+            ${statBlock(sum.games_completed_100 ?? 0, 'пройдено на 100%', 'var(--amber)')}
           </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">стоимость библиотеки: <span style="color:var(--text);">$${sum.library_cost_usd ?? 0}</span></div>
           ${cheevoRarityChips(s.rarity_tiers)}
         </div>
       </div>`;
-    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { scrollX: true });
     const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(s.rarest));
-    const topRow = `<div class="grid" style="margin-bottom:14px;">${summaryCard}${heatmapCard}${rarestCard}</div>`;
+    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { wrap: true });
+    const topRow = `<div class="grid" style="margin-bottom:14px;">${summaryCard}${rarestCard}</div>`;
+    const heatmapRow = heatmapCard ? `<div style="margin-bottom:14px;">${heatmapCard}</div>` : '';
     const games = s.games || [];
     const gamesGrid = games.length
       ? `<div class="grid">${games.map(g => cheevoGameCard(
@@ -948,26 +975,27 @@ else
           g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${escapeHtml(g.name || '').replace(/'/g, "\\'")}')` : '',
         )).join('')}</div>`
       : `<div class="widget-placeholder">игр пока нет — нажмите "обновить"</div>`;
-    return topRow + gamesGrid;
+    return topRow + heatmapRow + gamesGrid;
   }
 
   function renderCheevoRetroTab(r) {
     if (!r) return '<div class="widget-placeholder">RetroAchievements не настроен</div>';
     const sum = r.summary || {};
     const profile = r.profile || {};
+    const statBlock = (value, label, color) => `
+      <div>
+        <div style="font-size:1.35rem;font-weight:600;color:${color || 'var(--text)'};">${value}</div>
+        <div class="balance-label" style="margin-top:2px;">${label}</div>
+      </div>`;
     const summaryCard = `
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
-          <div class="name" style="margin-bottom:8px;">${escapeHtml(profile.username || 'retroachievements')}</div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            ${cheevoRows([
-              ['игр', sum.games_count ?? 0],
-              ['замастерено', sum.games_mastered ?? 0],
-              ['пройдено', sum.games_completed ?? 0],
-              ['очки', profile.points ?? 0],
-              ['хардкор-очки', profile.retro_points ?? 0],
-              ['% хардкор', `${sum.overall_hardcore_percent ?? 0}%`],
-            ])}
+          <div class="name" style="margin-bottom:10px;">${escapeHtml(profile.username || 'retroachievements')}</div>
+          <div style="display:grid;grid-template-columns:repeat(2, minmax(0,1fr));gap:12px;">
+            ${statBlock(sum.games_count ?? 0, 'игр')}
+            ${statBlock(sum.games_mastered ?? 0, 'замастерено', 'var(--amber)')}
+            ${statBlock(`${sum.overall_hardcore_percent ?? 0}%`, `хардкор: ${sum.games_completed ?? 0} пройдено`, 'var(--accent)')}
+            ${statBlock(profile.points ?? 0, `очки (хардкор: ${profile.retro_points ?? 0})`)}
           </div>
           ${cheevoRarityChips(r.rarity_tiers)}
         </div>
@@ -991,7 +1019,7 @@ else
     const sum = s.summary || {};
     const rsum = (r && r.summary) || {};
     const rprofile = (r && r.profile) || {};
-    return `<div class="grid stack-grid">
+    const summariesRow = `<div class="grid" style="margin-bottom:14px;">
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">steam</div>
@@ -1009,6 +1037,10 @@ else
         </div>
       </div>
     </div>`;
+    const steamRarest = cheevoInfoCard('редчайшие (steam)', cheevoRarestList(s.rarest));
+    const raRarest = cheevoInfoCard('редчайшие (RA)', cheevoRarestList(r && r.rarest));
+    const rarestRow = (steamRarest || raRarest) ? `<div class="grid">${steamRarest || '<div></div>'}${raRarest || '<div></div>'}</div>` : '';
+    return summariesRow + rarestRow;
   }
 
   async function openCheevoAchievements(platform, id, name) {
@@ -1089,9 +1121,17 @@ else
         </div>
         <div class="card static" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
-            <div class="rates-grid">
+            <div class="balance-label">Валюта</div>
+            <div class="rates-grid" style="margin-top:8px;">
               ${rateChip('USD', rates.usd, true)}
               ${rateChip('EUR', rates.eur, true)}
+            </div>
+          </div>
+        </div>
+        <div class="card static" style="align-items:stretch;cursor:default;">
+          <div class="top" style="width:100%;">
+            <div class="balance-label">Криптовалюта</div>
+            <div class="rates-grid" style="margin-top:8px;">
               ${rateChip('BTC', rates.btc, true)}
               ${rateChip('ETH', rates.eth, true)}
             </div>
@@ -1192,16 +1232,18 @@ else
     const el = document.createElement('div');
     el.className = 'card static memo-post';
     el.style.cssText = 'cursor:default;align-items:stretch;';
-    const imgTag = post.image ? `<img src="/api/memoscope/image/${encodeURIComponent(post.image)}" loading="lazy">` : '';
+    const imgTag = post.image
+      ? `<div style="background:var(--bg);border-radius:6px;margin-bottom:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;max-height:260px;"><img src="/api/memoscope/image/${encodeURIComponent(post.image)}" loading="lazy" style="width:100%;max-height:260px;object-fit:contain;display:block;"></div>`
+      : '';
     el.innerHTML = `
       <div class="top" style="width:100%;">
         ${imgTag}
         <div class="post-date">${escapeHtml(post.date)}</div>
         <div class="post-body">${post.html}</div>
-        <div class="post-actions">
-          <button onclick="memoEditPost(${post.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎ изменить</button>
-          <button onclick="memoDeletePost(${post.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕ удалить</button>
-        </div>
+      </div>
+      <div class="bottom" style="border-top:1px solid var(--line);padding-top:8px;margin-top:10px;justify-content:flex-end;gap:6px;">
+        <button onclick="memoEditPost(${post.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎</button>
+        <button onclick="memoDeletePost(${post.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕</button>
       </div>`;
     return el;
   }
@@ -1548,6 +1590,7 @@ else
     document.getElementById('serviceOverlay').classList.remove('open');
     document.getElementById('overlayBody').innerHTML = '';
     document.getElementById('overlayActions').innerHTML = '';
+    currentOpenWidgetId = null;
     if (widgetAutoRefreshTimer) {
       clearInterval(widgetAutoRefreshTimer);
       widgetAutoRefreshTimer = null;
@@ -1575,7 +1618,57 @@ else
   // popstate — реагируем так же, как на клик по кнопке в интерфейсе.
   window.addEventListener('popstate', closeOverlayDom);
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlay(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeOverlay(); return; }
+    // Backspace как "назад" — только на десктопе (веб), только пока оверлей
+    // реально открыт, и только если фокус НЕ в поле ввода/textarea/
+    // редактируемом тексте — иначе обычное удаление символа при наборе
+    // текста (например, в редакторе поста MemoScope) закрывало бы оверлей
+    // вместо стирания буквы.
+    if (e.key === 'Backspace') {
+      const overlay = document.getElementById('serviceOverlay');
+      if (!overlay || !overlay.classList.contains('open')) return;
+      if (document.querySelector('.ms-modal-backdrop.open')) return;
+      const active = document.activeElement;
+      const isEditable = active && (
+        active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable
+      );
+      if (isEditable) return;
+      e.preventDefault();
+      closeOverlay();
+    }
+  });
+
+  // Свайп между вкладками Cheevoscope на мобильном (Steam/RetroAchievements/
+  // Общая статистика) — работает только пока реально открыт именно этот
+  // виджет (currentOpenWidgetId, см. loadWidget), чтобы случайный свайп по
+  // другому открытому виджету ничего не переключал.
+  (function initCheevoSwipe() {
+    let touchStartX = 0, touchStartY = 0, touchActive = false;
+    const overlayBody = document.getElementById('overlayBody');
+    overlayBody.addEventListener('touchstart', (e) => {
+      if (currentOpenWidgetId !== 'cheevoscope-stats' || e.touches.length !== 1) { touchActive = false; return; }
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchActive = true;
+    }, { passive: true });
+    overlayBody.addEventListener('touchend', (e) => {
+      if (!touchActive) return;
+      touchActive = false;
+      if (currentOpenWidgetId !== 'cheevoscope-stats') return;
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - touchStartX;
+      const deltaY = touch.clientY - touchStartY;
+      // Заметно больше по горизонтали, чем по вертикали (не спутать с
+      // обычным вертикальным скроллом страницы) и достаточно длинный свайп.
+      if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY) * 1.5) return;
+      const tabs = ['steam', 'retro', 'overall'];
+      const idx = tabs.indexOf(cheevoActiveTab);
+      if (idx === -1) return;
+      if (deltaX < 0 && idx < tabs.length - 1) switchCheevoTab(tabs[idx + 1]);
+      else if (deltaX > 0 && idx > 0) switchCheevoTab(tabs[idx - 1]);
+    }, { passive: true });
+  })();
 
   async function measureBottomPing(){
     const el = document.getElementById('ping');
