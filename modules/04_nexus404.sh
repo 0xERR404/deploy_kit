@@ -117,6 +117,7 @@ else
   .status-actions .logout-link{ color:var(--muted); text-decoration:none; font-size:0.72rem; }
   .status-actions .logout-link:hover{ color:var(--red); }
   .js-push-toggle:hover{ color:var(--accent) !important; }
+  .header-right{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:flex-end; flex-shrink:0; }
 
   .title-block{ display:flex; align-items:center; flex-wrap:wrap; gap:10px 15px; margin:clamp(12px, 3vw, 16px) 0 clamp(16px, 4vw, 22px); border-left:3px solid var(--accent); padding-left:14px; }
   .title-block .brand{ font-size:clamp(1.05rem, 3vw, 1.35rem); font-weight:500; color:var(--text); text-transform:uppercase; letter-spacing:0.06em; }
@@ -215,12 +216,13 @@ else
   .balance-label{ font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); }
   .balance-amount{ font-size:clamp(1.15rem, 4vw, 1.5rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
   .rates-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
-  .rate-chip{ border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .rate-chip{ background:rgba(255,255,255,0.03); border-radius:6px; padding:8px 10px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px; min-width:0; }
   .rate-chip .sym{ color:var(--muted); font-size:0.65rem; text-transform:uppercase; }
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tx-amount.income{ color:var(--green); }
   .tx-amount.expense{ color:var(--red); }
   .tx-amount.deposit_in{ color:var(--accent); }
+  .tx-amount.deposit_out{ color:var(--accent); }
 
   /* ===== MemoScope: посты ===== */
   .memo-columns{ display:flex; gap:14px; align-items:flex-start; }
@@ -245,11 +247,14 @@ else
     .service-overlay-bar .back{ padding:4px 10px; font-size:0.65rem; }
     .service-overlay-bar #overlayActions button:not(.cheevo-icon-btn){ font-size:0.58rem !important; padding:3px 5px !important; }
     .service-overlay-bar #overlayActions .cheevo-icon-btn{ font-size:1.05rem !important; padding:2px 12px !important; height:30px !important; }
-    /* Ряд 1: prompt слева, "online" справа. Ряд 2 (уведомления+выйти) —
-       принудительно на новую строку (flex-basis:100% в flex-wrap
-       контейнере всегда переносит элемент целиком), прижат к правому краю
-       своей собственной строки. */
-    .status-actions{ order:3; flex-basis:100%; justify-content:flex-end; margin-top:2px; }
+    /* Ряд 1: prompt слева, "online" справа (внутри header-right — он
+       теперь идёт первым визуально через order, хотя в разметке стоит
+       вторым). Ряд 2 (колокольчик+выйти) — принудительно на новую строку
+       (flex-basis:100% в flex-wrap-контейнере header-right всегда
+       переносит элемент целиком), прижат к правому краю своей строки. */
+    .header-right{ gap:4px 10px; }
+    .status-indicator{ order:1; }
+    .status-actions{ order:2; flex-basis:100%; justify-content:flex-end; }
   }
   @media(max-width:420px){
     .metrics-row{ flex-wrap:nowrap; }
@@ -266,11 +271,13 @@ else
 <div class="wrap">
   <div class="header-row">
     <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain" id="domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
-    <div class="status-actions">
-      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
-      <a href="/logout" class="logout-link">[выйти]</a>
+    <div class="header-right">
+      <div class="status-actions">
+        <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <a href="/logout" class="logout-link">[выйти]</a>
+      </div>
+      <div class="status-indicator"><span class="dot"></span>online</div>
     </div>
-    <div class="status-indicator"><span class="dot"></span>online</div>
   </div>
   <div class="title-block">
     <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -291,11 +298,13 @@ else
   <div class="wrap" style="display:flex; flex-direction:column; height:100%; width:100%;">
     <div class="header-row">
       <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
+      <div class="header-right">
       <div class="status-actions">
-      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
-      <a href="/logout" class="logout-link">[выйти]</a>
+        <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <a href="/logout" class="logout-link">[выйти]</a>
+      </div>
+      <div class="status-indicator"><span class="dot"></span>online</div>
     </div>
-    <div class="status-indicator"><span class="dot"></span>online</div>
     </div>
     <div class="title-block">
       <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -331,6 +340,15 @@ else
     <div class="ms-modal-header"><span class="title">Перевести на депозит</span><button class="ms-btn" onclick="closeWalletModal('walletTransferModalBackdrop')">✕</button></div>
     <div class="ms-modal-body"><div class="ms-field"><label>Сумма, ₽ (доступно на карте: <span id="walletTransferAvailable"></span>)</label><input type="number" id="walletTransferAmount" placeholder="0"></div></div>
     <div class="ms-modal-footer"><button class="ms-btn" onclick="closeWalletModal('walletTransferModalBackdrop')">Отмена</button><button class="ms-btn primary" onclick="walletSaveTransfer()">Перевести</button></div>
+  </div>
+</div>
+
+<!-- WalletScope: снятие с депозита -->
+<div class="ms-modal-backdrop" id="walletWithdrawModalBackdrop">
+  <div class="ms-modal-box">
+    <div class="ms-modal-header"><span class="title">Снять с депозита</span><button class="ms-btn" onclick="closeWalletModal('walletWithdrawModalBackdrop')">✕</button></div>
+    <div class="ms-modal-body"><div class="ms-field"><label>Сумма, ₽ (доступно на депозите: <span id="walletWithdrawAvailable"></span>)</label><input type="number" id="walletWithdrawAmount" placeholder="0"></div></div>
+    <div class="ms-modal-footer"><button class="ms-btn" onclick="closeWalletModal('walletWithdrawModalBackdrop')">Отмена</button><button class="ms-btn primary" onclick="walletSaveWithdraw()">Снять</button></div>
   </div>
 </div>
 
@@ -1309,7 +1327,7 @@ else
           <div class="desc">${escapeHtml(tx.date)}</div>
           <div class="tx-amount ${tx.type}" style="margin-top:8px;font-size:1rem;">${(tx.type === 'income' || tx.type === 'deposit_in') ? '+' : '−'}${formatRub(tx.amount)}</div>
         </div>
-        ${tx.type === 'deposit_in' ? '' : `
+        ${(tx.type === 'deposit_in' || tx.type === 'deposit_out') ? '' : `
         <div class="bottom" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px;justify-content:flex-end;gap:6px;">
           <button onclick="walletEditTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎</button>
           <button onclick="walletDeleteTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕</button>
@@ -1354,7 +1372,10 @@ else
           <div class="top" style="width:100%;">
             <div class="balance-label">Депозит</div>
             <div class="balance-amount">${formatRub(d.deposit)}</div>
-            <div style="margin-top:8px;"><button onclick="walletOpenTransferModal()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">→ на депозит</button></div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+              <button onclick="walletOpenTransferModal()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">→ на депозит</button>
+              <button onclick="walletOpenWithdrawModal()" style="font-size:0.7rem;color:var(--amber);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">← снять</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1421,6 +1442,25 @@ else
     const data = await res.json();
     if (data.error) { alert(data.error); return; }
     closeWalletModal('walletTransferModalBackdrop');
+    loadWidget('walletscope-data', document.getElementById('overlayBody'));
+  }
+
+  function walletOpenWithdrawModal() {
+    document.getElementById('walletWithdrawAvailable').textContent = formatRub(walletLastData ? walletLastData.deposit : 0);
+    document.getElementById('walletWithdrawAmount').value = '';
+    document.getElementById('walletWithdrawModalBackdrop').classList.add('open');
+  }
+
+  async function walletSaveWithdraw() {
+    const amount = parseFloat(document.getElementById('walletWithdrawAmount').value) || 0;
+    if (amount <= 0) return;
+    const res = await fetch('/api/walletscope/withdraw', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    closeWalletModal('walletWithdrawModalBackdrop');
     loadWidget('walletscope-data', document.getElementById('overlayBody'));
   }
 
@@ -2103,7 +2143,9 @@ def read_file(path):
 
 
 def http_get(url, headers=None, timeout=30):
-    req = urllib.request.Request(url, headers=headers or {})
+    req_headers = {"User-Agent": "deploy_kit-hub/1.0"}
+    req_headers.update(headers or {})
+    req = urllib.request.Request(url, headers=req_headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.status, resp.read()
 
@@ -2423,7 +2465,9 @@ def read_file(path):
 
 
 def http_get(url, headers=None, timeout=30):
-    req = urllib.request.Request(url, headers=headers or {})
+    req_headers = {"User-Agent": "deploy_kit-hub/1.0"}
+    req_headers.update(headers or {})
+    req = urllib.request.Request(url, headers=req_headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.status, resp.read()
 
@@ -3368,6 +3412,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if walletscope and path == "/api/walletscope/transfer":
             walletscope.widget_walletscope_transfer(self)
+            return
+
+        if walletscope and path == "/api/walletscope/withdraw":
+            walletscope.widget_walletscope_withdraw(self)
             return
 
         if memoscope and path == "/api/memoscope/add":

@@ -99,7 +99,8 @@ def fetch_exchange_rates():
         cbr = json.loads(body)
         rates["usd"] = round(cbr["Valute"]["USD"]["Value"], 2)
         rates["eur"] = round(cbr["Valute"]["EUR"]["Value"], 2)
-    except Exception:
+    except Exception as e:
+        print(f"[walletscope] не удалось получить курсы ЦБ РФ: {e}", flush=True)
         cbr = None
 
     # KZT/CNY — отдельный try/except от USD/EUR выше: если тут что-то
@@ -115,8 +116,8 @@ def fetch_exchange_rates():
                 v = cbr["Valute"].get(code)
                 if v:
                     rates[key] = round(v["Value"] / v.get("Nominal", 1), 4)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[walletscope] не удалось разобрать KZT/CNY из ответа ЦБ РФ: {e}", flush=True)
 
     # Крипта — запрашиваем в USD (у CoinGecko практически для любой монеты
     # есть надёжная USD-котировка, в отличие от RUB, которая для менее
@@ -135,8 +136,8 @@ def fetch_exchange_rates():
             rates["eth"] = round(cg["ethereum"]["usd"] * usd_rate)
             rates["xmr"] = round(cg["monero"]["usd"] * usd_rate)
             rates["doge"] = round(cg["dogecoin"]["usd"] * usd_rate, 2)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[walletscope] не удалось получить курсы CoinGecko: {e}", flush=True)
 
     # Кэшируем, даже если что-то из двух источников не ответило — лучше
     # показать старое/частичное значение, чем ничего, и не долбить внешний
@@ -208,8 +209,8 @@ def widget_walletscope_edit(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
-    if tx["type"] == "deposit_in":
-        handler._send_json({"error": "это запись о переводе на депозит — правится только через сам депозит, а не как обычная операция"}, status=400)
+    if tx["type"] in ("deposit_in", "deposit_out"):
+        handler._send_json({"error": "это запись о переводе с/на депозит — правится только через сам депозит, а не как обычная операция"}, status=400)
         return
 
     # Откатываем старый эффект на баланс карты, потом применяем новый —
@@ -242,8 +243,8 @@ def widget_walletscope_delete(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
-    if tx["type"] == "deposit_in":
-        handler._send_json({"error": "это запись о переводе на депозит — отдельно не удаляется, депозит корректируйте напрямую"}, status=400)
+    if tx["type"] in ("deposit_in", "deposit_out"):
+        handler._send_json({"error": "это запись о переводе с/на депозит — отдельно не удаляется, депозит корректируйте напрямую"}, status=400)
         return
     data["card"] = round(data["card"] - (tx["amount"] if tx["type"] == "income" else -tx["amount"]), 2)
     data["transactions"] = [t for t in data.get("transactions", []) if str(t["id"]) != str(tx_id)]
@@ -285,6 +286,43 @@ def widget_walletscope_transfer(handler):
     txs = data.setdefault("transactions", [])
     txs.append({"id": next_unique_id(), "type": "expense", "amount": amount, "desc": "Перевод на депозит", "date": now})
     txs.append({"id": next_unique_id(), "type": "deposit_in", "amount": amount, "desc": "Пополнение с карты", "date": now})
+    save_walletscope(data)
+    handler._send_json({"ok": True})
+
+
+def widget_walletscope_withdraw(handler):
+    """Снятие с депозита обратно на карту — зеркально widget_walletscope_transfer
+    выше. Та же логика по записям в историю: карточная сторона — обычный
+    "income" (реальные деньги приходят на карту, ровно тот же принцип, что
+    "expense" у стороны карты при переводе НА депозит), депозитная сторона —
+    свой тип "deposit_out" (НЕ "expense", чтобы не путать с реальным
+    расходом — деньги никуда не потрачены, просто перемещены на карту)."""
+    content_length = int(handler.headers.get("Content-Length", 0))
+    if content_length <= 0:
+        handler._send_json({"error": "пустой запрос"}, status=400)
+        return
+    try:
+        body = json.loads(handler.rfile.read(content_length))
+    except json.JSONDecodeError:
+        handler._send_json({"error": "некорректный JSON"}, status=400)
+        return
+    try:
+        amount = round(float(body.get("amount")), 2)
+        if not math.isfinite(amount):
+            amount = 0
+    except (TypeError, ValueError):
+        amount = 0
+
+    data = load_walletscope()
+    if amount <= 0 or amount > data.get("deposit", 0):
+        handler._send_json({"error": "сумма должна быть больше нуля и не больше остатка на депозите"}, status=400)
+        return
+    data["deposit"] = round(data["deposit"] - amount, 2)
+    data["card"] = round(data.get("card", 0) + amount, 2)
+    now = time.strftime("%d.%m.%Y %H:%M")
+    txs = data.setdefault("transactions", [])
+    txs.append({"id": next_unique_id(), "type": "income", "amount": amount, "desc": "Снятие с депозита", "date": now})
+    txs.append({"id": next_unique_id(), "type": "deposit_out", "amount": amount, "desc": "Снято на карту", "date": now})
     save_walletscope(data)
     handler._send_json({"ok": True})
 
