@@ -99,28 +99,44 @@ def fetch_exchange_rates():
         cbr = json.loads(body)
         rates["usd"] = round(cbr["Valute"]["USD"]["Value"], 2)
         rates["eur"] = round(cbr["Valute"]["EUR"]["Value"], 2)
-        # KZT/CNY у ЦБ РФ котируются НЕ обязательно за 1 единицу (Nominal
-        # может быть 10/100) — делим на Nominal, чтобы получить курс именно
-        # за 1 единицу, как и для USD/EUR. Больше десятичных знаков, чем у
-        # USD/EUR — курс тенге к рублю сам по себе маленькое число (~0.17).
-        for code, key in (("KZT", "kzt"), ("CNY", "cny")):
-            v = cbr["Valute"].get(code)
-            if v:
-                rates[key] = round(v["Value"] / v.get("Nominal", 1), 4)
     except Exception:
-        pass
-    try:
-        _, body = http_get(
-            "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,monero,dogecoin&vs_currencies=rub",
-            timeout=10,
-        )
-        cg = json.loads(body)
-        rates["btc"] = round(cg["bitcoin"]["rub"])
-        rates["eth"] = round(cg["ethereum"]["rub"])
-        rates["xmr"] = round(cg["monero"]["rub"])
-        rates["doge"] = round(cg["dogecoin"]["rub"], 2)
-    except Exception:
-        pass
+        cbr = None
+
+    # KZT/CNY — отдельный try/except от USD/EUR выше: если тут что-то
+    # пойдёт не так (например, эти коды внезапно отсутствуют в конкретном
+    # ответе ЦБ РФ), USD/EUR это больше не затронет.
+    if cbr:
+        try:
+            # Котируются НЕ обязательно за 1 единицу (Nominal может быть
+            # 10/100) — делим на Nominal, чтобы получить курс именно за 1
+            # единицу, как и для USD/EUR. Больше десятичных знаков — курс
+            # тенге к рублю сам по себе маленькое число (~0.17).
+            for code, key in (("KZT", "kzt"), ("CNY", "cny")):
+                v = cbr["Valute"].get(code)
+                if v:
+                    rates[key] = round(v["Value"] / v.get("Nominal", 1), 4)
+        except Exception:
+            pass
+
+    # Крипта — запрашиваем в USD (у CoinGecko практически для любой монеты
+    # есть надёжная USD-котировка, в отличие от RUB, которая для менее
+    # популярных монет иногда просто отсутствует/недокэширована) и
+    # конвертируем через уже полученный курс USD/RUB. Без курса USD (ЦБ РФ
+    # не ответил) конвертировать не во что — крипта тогда останется None.
+    if rates["usd"]:
+        try:
+            _, body = http_get(
+                "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,monero,dogecoin&vs_currencies=usd",
+                timeout=10,
+            )
+            cg = json.loads(body)
+            usd_rate = rates["usd"]
+            rates["btc"] = round(cg["bitcoin"]["usd"] * usd_rate)
+            rates["eth"] = round(cg["ethereum"]["usd"] * usd_rate)
+            rates["xmr"] = round(cg["monero"]["usd"] * usd_rate)
+            rates["doge"] = round(cg["dogecoin"]["usd"] * usd_rate, 2)
+        except Exception:
+            pass
 
     # Кэшируем, даже если что-то из двух источников не ответило — лучше
     # показать старое/частичное значение, чем ничего, и не долбить внешний
@@ -192,6 +208,9 @@ def widget_walletscope_edit(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
+    if tx["type"] == "deposit_in":
+        handler._send_json({"error": "это запись о переводе на депозит — правится только через сам депозит, а не как обычная операция"}, status=400)
+        return
 
     # Откатываем старый эффект на баланс карты, потом применяем новый —
     # проще и надёжнее, чем высчитывать разницу отдельно для каждого поля.
@@ -223,6 +242,9 @@ def widget_walletscope_delete(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
+    if tx["type"] == "deposit_in":
+        handler._send_json({"error": "это запись о переводе на депозит — отдельно не удаляется, депозит корректируйте напрямую"}, status=400)
+        return
     data["card"] = round(data["card"] - (tx["amount"] if tx["type"] == "income" else -tx["amount"]), 2)
     data["transactions"] = [t for t in data.get("transactions", []) if str(t["id"]) != str(tx_id)]
     save_walletscope(data)
@@ -252,6 +274,17 @@ def widget_walletscope_transfer(handler):
         return
     data["card"] = round(data["card"] - amount, 2)
     data["deposit"] = round(data.get("deposit", 0) + amount, 2)
+    # Перевод раньше менял только баланс, никак не отражаясь в списке
+    # операций — выглядело так, будто деньги просто исчезли с карты без
+    # следа. Добавляем 2 записи одним и тем же переводом: списание с
+    # карты (тип "expense", тот же смысл, что обычный расход) и отдельная
+    # запись пополнения депозита (свой тип "deposit_in" — НЕ "income",
+    # чтобы не путать с реальным доходом при подсчёте общей суммы
+    # заработанного, это внутреннее перемещение денег, а не новые деньги).
+    now = time.strftime("%d.%m.%Y %H:%M")
+    txs = data.setdefault("transactions", [])
+    txs.append({"id": next_unique_id(), "type": "expense", "amount": amount, "desc": "Перевод на депозит", "date": now})
+    txs.append({"id": next_unique_id(), "type": "deposit_in", "amount": amount, "desc": "Пополнение с карты", "date": now})
     save_walletscope(data)
     handler._send_json({"ok": True})
 

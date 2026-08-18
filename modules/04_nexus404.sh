@@ -220,6 +220,7 @@ else
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tx-amount.income{ color:var(--green); }
   .tx-amount.expense{ color:var(--red); }
+  .tx-amount.deposit_in{ color:var(--accent); }
 
   /* ===== MemoScope: посты ===== */
   .memo-columns{ display:flex; gap:14px; align-items:flex-start; }
@@ -265,11 +266,11 @@ else
 <div class="wrap">
   <div class="header-row">
     <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain" id="domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
-    <div class="status-indicator"><span class="dot"></span>online</div>
     <div class="status-actions">
-      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
       <a href="/logout" class="logout-link">[выйти]</a>
     </div>
+    <div class="status-indicator"><span class="dot"></span>online</div>
   </div>
   <div class="title-block">
     <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -290,11 +291,11 @@ else
   <div class="wrap" style="display:flex; flex-direction:column; height:100%; width:100%;">
     <div class="header-row">
       <div class="prompt"><span class="user">0xERR404</span><span class="at">@</span><span class="host js-domain">localhost</span><span class="colon">:</span><span class="path">~$</span> <span class="cmd">./nexus404</span><span class="cursor"></span></div>
-      <div class="status-indicator"><span class="dot"></span>online</div>
-    <div class="status-actions">
-      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+      <div class="status-actions">
+      <a href="#" onclick="togglePushSubscription();return false;" class="js-push-toggle" style="color:var(--muted);display:flex;align-items:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
       <a href="/logout" class="logout-link">[выйти]</a>
     </div>
+    <div class="status-indicator"><span class="dot"></span>online</div>
     </div>
     <div class="title-block">
       <div class="brand"><span class="highlight">NEXUS404</span></div>
@@ -424,10 +425,10 @@ else
 
     let html = '';
     if (services.length) {
-      html += `<div class="section-title">сервисы</div><div class="grid grid-2col">${services.map(i => renderCard(i, 'сервис')).join('')}</div>`;
+      html += `<div class="section-title">сервисы</div><div class="grid">${services.map(i => renderCard(i, 'сервис')).join('')}</div>`;
     }
     if (ownWidgets.length) {
-      html += `<div class="section-title">виджеты</div><div class="grid grid-2col">${ownWidgets.map(i => renderCard(i, 'виджет')).join('')}</div>`;
+      html += `<div class="section-title">виджеты</div><div class="grid">${ownWidgets.map(i => renderCard(i, 'виджет')).join('')}</div>`;
     }
     container.innerHTML = html;
   }
@@ -486,10 +487,12 @@ else
             badgeEl.textContent = data.online ? 'online' : 'offline';
             badgeEl.style.background = data.online ? 'rgba(76,175,80,0.15)' : 'rgba(244,67,54,0.15)';
             badgeEl.style.color = data.online ? 'var(--green)' : 'var(--red)';
+            badgeEl.style.boxShadow = data.online ? '0 0 8px rgba(76,175,80,0.35)' : '0 0 8px rgba(244,67,54,0.35)';
           } else {
             badgeEl.textContent = 'checking...';
             badgeEl.style.background = 'rgba(255,204,102,0.1)';
             badgeEl.style.color = 'var(--amber)';
+            badgeEl.style.boxShadow = '0 0 8px rgba(255,204,102,0.3)';
           }
         }
         if (pingEl) {
@@ -868,21 +871,36 @@ else
     `).join('');
   }
 
+  // Те же цвета и пороги, что и в cheevoRarityChips ниже — используется
+  // везде, где нужно покрасить конкретную ачивку по её реальному тиру
+  // редкости (не бинарно "супер редкая или нет").
+  const CHEEVO_TIER_COLORS = {
+    gold: '#ffd700', purple: '#b565f0', blue: '#6c8eff',
+    green: '#4caf50', white: '#e8e8e8', gray: '#8a8f9c',
+  };
+  function cheevoTierColor(percent) {
+    if (percent == null) return CHEEVO_TIER_COLORS.gray;
+    if (percent <= 1) return CHEEVO_TIER_COLORS.gold;
+    if (percent <= 3) return CHEEVO_TIER_COLORS.purple;
+    if (percent <= 8) return CHEEVO_TIER_COLORS.blue;
+    if (percent <= 20) return CHEEVO_TIER_COLORS.green;
+    if (percent <= 50) return CHEEVO_TIER_COLORS.white;
+    return CHEEVO_TIER_COLORS.gray;
+  }
+
   function cheevoRarityChips(tiers) {
     if (!tiers || !tiers.total_rated) return '';
     // Точки в реальных цветах тира — тот же приём, что золотая точка
-    // "online" в шапке, просто разные цвета под разные тиры редкости.
-    const tierColors = {
-      gold: '#ffd700', purple: '#b565f0', blue: '#6c8eff',
-      green: '#4caf50', white: '#e8e8e8', gray: '#8a8f9c',
-    };
+    // "online" в шапке. Без подписи тира — цвет сам по себе достаточно
+    // говорящий, само число крупнее и заметнее.
+    const tierColors = CHEEVO_TIER_COLORS;
     const chips = Object.entries(tiers.counts || {}).map(([tier, count]) => `
-      <div style="display:flex;align-items:center;gap:5px;font-size:0.65rem;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:4px 8px;">
-        <span style="width:7px;height:7px;border-radius:50%;background:${tierColors[tier] || 'var(--muted)'};box-shadow:0 0 6px ${tierColors[tier] || 'var(--muted)'}80;flex-shrink:0;"></span>
-        ${escapeHtml(tier)}: <span style="color:var(--text);">${count}</span>
+      <div style="display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;padding:6px 12px;">
+        <span style="width:11px;height:11px;border-radius:50%;background:${tierColors[tier] || 'var(--muted)'};box-shadow:0 0 8px ${tierColors[tier] || 'var(--muted)'}90;flex-shrink:0;"></span>
+        <span style="color:var(--text);font-size:0.95rem;font-weight:600;">${count}</span>
       </div>
     `).join('');
-    return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0;">${chips}</div>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0;">${chips}</div>`;
   }
 
   function cheevoHeatmapCells(heatmap) {
@@ -933,8 +951,8 @@ else
   function cheevoRarestList(rarest) {
     if (!rarest || !rarest.length) return '';
     return rarest.map(a => {
-      const isSuperRare = a.global_percent != null && a.global_percent <= 1;
-      return `<div style="font-size:0.72rem;color:var(--text);border-top:1px solid var(--line);padding-top:4px;margin-top:4px;">${escapeHtml(a.name || a.achievement || '')}${isSuperRare ? ' 🏆' : ''}<div style="color:${isSuperRare ? 'var(--amber)' : 'var(--muted)'};font-size:0.65rem;margin-top:1px;font-weight:${isSuperRare ? '600' : '400'};">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`;
+      const color = cheevoTierColor(a.global_percent);
+      return `<div style="font-size:0.72rem;color:var(--text);border-top:1px solid var(--line);border-left:3px solid ${color};padding:4px 0 4px 8px;margin-top:4px;">${escapeHtml(a.name || a.achievement || '')}<div style="color:${color};font-size:0.65rem;margin-top:1px;font-weight:600;">${escapeHtml(a.game || '')} · ${a.global_percent ?? '?'}%</div></div>`;
     }).join('');
   }
 
@@ -1005,7 +1023,7 @@ else
     // просто "не завезли": данные были готовы, просто не выводились.
     const reviewColor = (g.review_positive_percent ?? 0) >= 70 ? 'var(--green)' : ((g.review_positive_percent ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)');
     const reviewBlock = g.review_desc ? `
-      <div style="font-size:0.65rem;color:${reviewColor};margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.review_desc)} · ${g.review_positive_percent ?? 0}% (${g.review_total ?? 0})</div>` : '';
+      <div style="font-size:0.65rem;color:${reviewColor};margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.review_desc)} · ${g.review_positive_percent ?? 0}%</div>` : '';
     return `<div class="card${onclick ? '' : ' static'}" data-name="${escapeHtml((g.name || '').toLowerCase())}" data-hours="${g.hours ?? 0}" data-achpct="${g.achievements_percent ?? -1}" ${onclick ? `onclick="${onclick}"` : 'style="cursor:default;"'}>
       <div class="top">
         <img src="${escapeHtml(candidates[0] || '')}" data-candidates='${escapeHtml(JSON.stringify(candidates))}' data-fallback-idx="0" loading="lazy" onerror="handleCheevoImgError(this)" style="width:100%;aspect-ratio:16/7.5;object-fit:cover;border-radius:6px;margin-bottom:8px;background:var(--bg);">
@@ -1061,7 +1079,7 @@ else
           ${cheevoRarityChips(s.rarity_tiers)}
         </div>
       </div>`;
-    const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(s.rarest));
+    const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList((s.rarest || []).slice(0, 6)));
     const heatmapCard = (s.heatmap && Object.keys(s.heatmap).length)
       ? cheevoInfoCard('активность за год', '<div id="cheevo-heatmap-cells"></div>')
       : '';
@@ -1173,7 +1191,7 @@ else
       ? consoles.map(([name, pts]) => `<div style="font-size:0.75rem;color:var(--muted);border-top:1px solid var(--line);padding-top:6px;margin-top:6px;display:flex;justify-content:space-between;"><span>${escapeHtml(name)}</span><span style="color:var(--text);">${pts.hardcore ?? 0} (софткор: ${pts.softcore ?? 0})</span></div>`).join('')
       : '';
     const consolesCard = cheevoInfoCard('очки по консолям', consolesContent);
-    const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(r.rarest));
+    const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList((r.rarest || []).slice(0, 6)));
     const topRow = `<div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">${summaryCard}</div>
       <div style="flex:1;min-width:220px;">${consolesCard}</div>
@@ -1221,8 +1239,8 @@ else
       <div style="flex:1;min-width:220px;">${steamSummaryCard}</div>
       <div style="flex:1;min-width:220px;">${raSummaryCard}</div>
     </div>`;
-    const steamRarest = cheevoInfoCard('редчайшие (steam)', cheevoRarestList(s.rarest));
-    const raRarest = cheevoInfoCard('редчайшие (RA)', cheevoRarestList(r && r.rarest));
+    const steamRarest = cheevoInfoCard('редчайшие (steam)', cheevoRarestList((s.rarest || []).slice(0, 10)));
+    const raRarest = cheevoInfoCard('редчайшие (RA)', cheevoRarestList((r && r.rarest || []).slice(0, 10)));
     const rarestRow = (steamRarest || raRarest) ? `<div style="display:flex;gap:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:220px;">${steamRarest}</div>
       <div style="flex:1;min-width:220px;">${raRarest}</div>
@@ -1245,16 +1263,15 @@ else
       }
       body.innerHTML = `<div class="grid stack-grid">${data.achievements.map(a => {
         const icon = platform === 'retro' ? a.badge_url : (a.unlocked ? a.icon : (a.icon_gray || a.icon));
-        const isSuperRare = a.global_percent != null && a.global_percent <= 1;
-        const rareStyle = isSuperRare ? 'border-color:var(--amber);box-shadow:0 0 12px rgba(255,204,102,0.25);' : '';
+        const color = cheevoTierColor(a.global_percent);
         return `
-        <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};min-height:0;padding:8px 10px;${rareStyle}">
+        <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};min-height:0;padding:8px 10px;border-color:${color};box-shadow:0 0 10px ${color}30;">
           ${icon ? `<img src="${escapeHtml(icon)}" style="width:36px;height:36px;border-radius:6px;flex-shrink:0;">` : ''}
           <div style="min-width:0;flex:1;">
-            <div class="name" style="white-space:normal;font-size:0.82rem;">${escapeHtml(a.name || a.achievement || '')}${isSuperRare ? ' 🏆' : ''}</div>
+            <div class="name" style="white-space:normal;font-size:0.82rem;">${escapeHtml(a.name || a.achievement || '')}</div>
             <div class="desc" style="margin-top:1px;text-transform:none;white-space:normal;font-size:0.7rem;">${escapeHtml(a.description || '')}</div>
           </div>
-          <div style="font-size:0.7rem;color:var(--amber);flex-shrink:0;font-weight:${isSuperRare ? '700' : '400'};">${a.global_percent ?? '?'}%</div>
+          <div style="font-size:0.75rem;color:${color};flex-shrink:0;font-weight:700;">${a.global_percent ?? '?'}%</div>
         </div>`;
       }).join('')}</div>`;
     } catch (e) {
@@ -1290,12 +1307,13 @@ else
         <div class="top" style="width:100%;">
           <div class="name" style="white-space:normal;overflow-wrap:break-word;">${escapeHtml(tx.desc)}</div>
           <div class="desc">${escapeHtml(tx.date)}</div>
-          <div class="tx-amount ${tx.type}" style="margin-top:8px;font-size:1rem;">${tx.type === 'income' ? '+' : '−'}${formatRub(tx.amount)}</div>
+          <div class="tx-amount ${tx.type}" style="margin-top:8px;font-size:1rem;">${(tx.type === 'income' || tx.type === 'deposit_in') ? '+' : '−'}${formatRub(tx.amount)}</div>
         </div>
+        ${tx.type === 'deposit_in' ? '' : `
         <div class="bottom" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px;justify-content:flex-end;gap:6px;">
           <button onclick="walletEditTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎</button>
           <button onclick="walletDeleteTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕</button>
-        </div>
+        </div>`}
       </div>`).join('');
 
     return `<div class="widget-body">
@@ -1718,13 +1736,15 @@ else
       // undefined сразу, если активной регистрации нет.
       const reg = await navigator.serviceWorker.getRegistration();
       if (!reg) {
-        els.forEach(el => { el.title = 'Уведомления выключены — нажмите, чтобы включить'; el.style.opacity = '0.5'; });
+        els.forEach(el => { el.title = 'Уведомления выключены — нажмите, чтобы включить'; el.style.opacity = '0.5'; el.style.filter = 'none'; });
         return;
       }
       const sub = await reg.pushManager.getSubscription();
       els.forEach(el => {
         el.title = sub ? 'Уведомления включены — нажмите, чтобы выключить' : 'Уведомления выключены — нажмите, чтобы включить';
         el.style.opacity = sub ? '1' : '0.5';
+        el.style.filter = sub ? 'drop-shadow(0 0 4px var(--accent))' : 'none';
+        el.style.color = sub ? 'var(--accent)' : 'var(--muted)';
       });
     } catch (e) {
       els.forEach(el => { el.title = 'Уведомления выключены'; el.style.opacity = '0.5'; });
@@ -2271,6 +2291,41 @@ def build_authorize_url():
     return f"{POCKETID_PUBLIC_URL}/authorize?{urllib.parse.urlencode(params)}"
 
 
+# "Локальный" logout (просто стереть куку хаба) — недостаточно для OIDC:
+# у Pocket ID (как у любого IdP) СВОЯ отдельная сессия на своём домене. Без
+# явного "end session" у неё пользователь молча переавторизуется заново при
+# следующем заходе на /login — Pocket ID видит СВОЮ ещё живую сессию и не
+# спрашивает пароль/passkey вообще, что выглядит как "кнопка выйти не
+# работает", хотя формально хаб свою куку честно стёр. Решение — RP-Initiated
+# Logout по стандарту OIDC: если у Pocket ID есть end_session_endpoint (узнаём
+# из штатного .well-known/openid-configuration, не гадаем на конкретном URL
+# самостоятельно), редиректим туда — это и обрывает сессию у самого Pocket ID.
+_pocketid_end_session_endpoint = None
+_pocketid_discovery_checked = False
+
+
+def get_pocketid_end_session_endpoint():
+    global _pocketid_end_session_endpoint, _pocketid_discovery_checked
+    if _pocketid_discovery_checked:
+        return _pocketid_end_session_endpoint
+    if not POCKETID_PUBLIC_URL:
+        return None
+    try:
+        status, body = http_get(f"{POCKETID_INTERNAL_URL}/.well-known/openid-configuration", timeout=5)
+        discovery = json.loads(body)
+        _pocketid_end_session_endpoint = discovery.get("end_session_endpoint") or None
+        # Кэшируем только реальный ответ Pocket ID — даже "поля нет"
+        # (значит эта версия не поддерживает RP-Initiated Logout, это
+        # долговременный факт про конкретную установку). Сетевую ошибку
+        # НЕ кэшируем как результат — иначе один временный сбой Pocket ID
+        # навсегда запомнился бы как "endpoint не поддерживается" до
+        # перезапуска контейнера хаба.
+        _pocketid_discovery_checked = True
+    except Exception:
+        _pocketid_end_session_endpoint = None
+    return _pocketid_end_session_endpoint
+
+
 def exchange_code_for_session(code, state):
     _cleanup_expired()
     login_state = LOGIN_STATES.pop(state, None)
@@ -2316,6 +2371,7 @@ def exchange_code_for_session(code, state):
     SESSIONS[session_id] = {
         "exp": time.time() + SESSION_TTL,
         "email": userinfo.get("email", ""),
+        "id_token": token_data.get("id_token"),
     }
     return session_id, None
 
@@ -3114,7 +3170,20 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/logout":
-            self._redirect("/", clear_cookie=True)
+            session = get_session(self) if AUTH_ENABLED else None
+            end_session_endpoint = get_pocketid_end_session_endpoint() if AUTH_ENABLED else None
+            if end_session_endpoint:
+                params = {"post_logout_redirect_uri": HUB_PUBLIC_URL}
+                if session and session.get("id_token"):
+                    params["id_token_hint"] = session["id_token"]
+                self._redirect(f"{end_session_endpoint}?{urllib.parse.urlencode(params)}", clear_cookie=True)
+            else:
+                # Pocket ID не отдала end_session_endpoint (старая версия
+                # без RP-Initiated Logout, либо вообще недоступна прямо
+                # сейчас) — хотя бы честно чистим свою куку, это не идеально
+                # (сессия у Pocket ID при этом остаётся живой), но лучше,
+                # чем совсем ничего не делать.
+                self._redirect("/", clear_cookie=True)
             return
 
         # /api/auth-check — сюда обращается Caddy (forward_auth) ПЕРЕД тем,
