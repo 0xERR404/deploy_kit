@@ -513,13 +513,14 @@ else
     # репозитория отдельно, своим кодом. Publicный репозиторий клонируется
     # анонимно по git вообще без токена/ключа, что бы ни было выставлено
     # в REQUIRE_SIGNIN_VIEW — отсюда и этот дефолт.
-    if [ ! -f "$FORGEJO_DIR/docker-compose.yml" ]; then
         # combined-ca.pem подкладывается ПУСТЫМ файлом системных сертификатов
         # контейнера уже сейчас (см. шапку файла) — заполняется реальными
         # системными CA сразу после первого запуска ниже, чтобы SSL_CERT_FILE
         # никогда не указывал на пустой/отсутствующий файл (это обнулило бы
         # доверенные CA у Forgejo целиком, а не оставило бы их системными).
         # Сертификат портала входа добавляется туда же на шаге 4 (SSO).
+        # touch безопасен при повторном прогоне — не очищает уже
+        # заполненный файл, только обновляет метку времени.
         touch "$FORGEJO_CA_BUNDLE"
 
         cat > "$FORGEJO_DIR/docker-compose.yml" << EOF
@@ -579,9 +580,6 @@ networks:
     external: true
 EOF
         echo "${GREEN}[✓]${NC} docker-compose.yml создан: $FORGEJO_DIR/docker-compose.yml"
-    else
-        echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-    fi
 
     if command -v ufw >/dev/null 2>&1; then
         check_or_fail "открытие git-SSH порта $FORGEJO_SSH_PORT в ufw" \
@@ -592,6 +590,7 @@ EOF
     fi
 
     run_spinner "Запуск Forgejo" "dk_compose_up '$FORGEJO_DIR'"
+    (cd "$FORGEJO_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
     echo "${CYAN}[*]${NC} Жду готовности Forgejo..."
     if forgejo_wait_ready; then

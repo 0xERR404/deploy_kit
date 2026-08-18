@@ -69,10 +69,12 @@ else
 
     mkdir -p "$HUB_DIR/html" "$HUB_DIR/data"
 
-    # index.html не перезаписываем, если уже правили руками — как и с
-    # Caddyfile/конфигами в остальных модулях.
-    if [ ! -f "$HUB_DIR/html/index.html" ]; then
-        cat > "$HUB_DIR/html/index.html" << 'HTMLEOF'
+    # Перезаписываем всегда, когда этот шаг реально выполняется — от
+    # повторной перезаписи при обычном использовании защищает is_done
+    # снаружи (см. "ШАГ N" выше), а не проверка существования файла: без
+    # этого пункт меню "u) Обновить" (сброс STATEFILE) не имел бы смысла —
+    # шаг бы посчитался непройденным, но файл всё равно не обновился бы.
+    cat > "$HUB_DIR/html/index.html" << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -153,8 +155,11 @@ else
      строку, а не тычутся в кнопку "назад" впритык. */
   .service-overlay{ display:none; position:fixed; inset:0; z-index:1000; background:var(--bg); flex-direction:column; padding:clamp(16px, 4vw, 40px) clamp(12px, 3vw, 20px); box-sizing:border-box; }
   .service-overlay.open{ display:flex; }
-  .service-overlay-bar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; padding:10px 16px; min-height:46px; box-sizing:border-box; border:1px solid var(--line); border-radius:var(--card-radius); background:var(--panel); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--amber); text-shadow:0 0 12px rgba(255,204,102,0.25); margin:14px 0 10px; }
-  .service-overlay-bar > div:first-child{ flex-wrap:wrap; row-gap:6px; }
+  .service-overlay-bar{ display:flex; flex-direction:column; gap:8px; padding:10px 16px; min-height:46px; box-sizing:border-box; border:1px solid var(--line); border-radius:var(--card-radius); background:var(--panel); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--amber); text-shadow:0 0 12px rgba(255,204,102,0.25); margin:14px 0 10px; }
+  .service-overlay-bar-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+  .service-overlay-bar-top #overlayTitle{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .service-overlay-actions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .service-overlay-actions:empty{ display:none; }
   .service-overlay-bar .back{ background:none; border:1px solid var(--line); color:var(--text); padding:4px 14px; height:28px; box-sizing:border-box; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.75rem; display:flex; align-items:center; flex-shrink:0; }
   .service-overlay-bar .back:hover{ border-color:var(--accent); }
   .service-overlay .widget-placeholder{ flex:1; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:0.85rem; text-align:center; padding:20px; }
@@ -283,11 +288,11 @@ else
       <span class="sub">interface</span>
     </div>
     <div class="service-overlay-bar">
-      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap;row-gap:6px;">
+      <div class="service-overlay-bar-top">
         <span id="overlayTitle">СЕРВИС</span>
-        <div id="overlayActions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"></div>
+        <button class="back" onclick="closeOverlay()">← назад<span class="back-full"> в NEXUS404</span></button>
       </div>
-      <button class="back" onclick="closeOverlay()">← назад<span class="back-full"> в NEXUS404</span></button>
+      <div id="overlayActions" class="service-overlay-actions"></div>
     </div>
     <div id="overlayBody" style="flex:1; overflow-y:auto;"></div>
     <footer><span class="js-footer-brand">NEXUS404</span> © <span class="js-year">2026</span></footer>
@@ -691,6 +696,49 @@ else
   // ===== Cheevoscope: вкладки + плитка игр + модалка ачивок =====
   let cheevoActiveTab = 'steam';
   let cheevoLastData = null;
+  let cheevoStatusTimerInterval = null;
+
+  function cheevoFormatAgo(isoString) {
+    if (!isoString) return null;
+    const then = new Date(isoString).getTime();
+    if (isNaN(then)) return null;
+    let sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (sec < 60) return `${sec} сек назад`;
+    let min = Math.floor(sec / 60);
+    if (min < 60) return `${min} мин назад`;
+    let hrs = Math.floor(min / 60);
+    if (hrs < 24) return `${hrs} ч ${min % 60} мин назад`;
+    const days = Math.floor(hrs / 24);
+    return `${days} дн назад`;
+  }
+
+  function cheevoRenderStatusLine(status) {
+    if (!status) return '';
+    const steam = status.steam || {};
+    const parts = [];
+    if (steam.state === 'running') {
+      const stageNames = { games_list: 'список игр', images: 'картинки', achievements: 'достижения', reviews: 'отзывы', library_cost: 'цены', report: 'сборка отчёта' };
+      parts.push(`<span style="color:var(--amber);">идёт обновление (${stageNames[steam.stage] || steam.stage || '...'})</span>`);
+    } else if (steam.state === 'error') {
+      parts.push(`<span style="color:var(--red);">последняя попытка не удалась: ${escapeHtml(steam.error || 'неизвестная ошибка')}</span>`);
+    }
+    const agoText = cheevoFormatAgo(steam.last_success_at);
+    if (agoText) {
+      parts.push(`<span id="cheevo-last-success-ago" data-iso="${escapeHtml(steam.last_success_at)}">последнее успешное обновление: ${agoText}</span>`);
+    } else if (steam.state !== 'running') {
+      parts.push('<span style="color:var(--muted);">ни разу не обновлялось успешно</span>');
+    }
+    if (!parts.length) return '';
+    return `<div style="font-size:0.7rem;color:var(--muted);margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;">${parts.join('')}</div>`;
+  }
+
+  function cheevoTickStatusTimer() {
+    const el = document.getElementById('cheevo-last-success-ago');
+    if (!el) return;
+    const iso = el.dataset.iso;
+    const agoText = cheevoFormatAgo(iso);
+    if (agoText) el.textContent = `последнее успешное обновление: ${agoText}`;
+  }
 
   function renderCheevoscope(d) {
     cheevoLastData = d;
@@ -711,7 +759,12 @@ else
     if (cheevoActiveTab === 'retro') body = renderCheevoRetroTab(d.retro);
     else if (cheevoActiveTab === 'overall') body = renderCheevoOverallTab(d.steam, d.retro);
 
+    if (!cheevoStatusTimerInterval) {
+      cheevoStatusTimerInterval = setInterval(cheevoTickStatusTimer, 1000);
+    }
+
     return `<div class="widget-body">
+      ${cheevoRenderStatusLine(d.status)}
       <div style="display:flex;gap:6px;margin-bottom:14px;">${tabButtons}</div>
       ${body}
     </div>`;
@@ -1492,6 +1545,10 @@ else
       clearInterval(widgetAutoRefreshTimer);
       widgetAutoRefreshTimer = null;
     }
+    if (cheevoStatusTimerInterval) {
+      clearInterval(cheevoStatusTimerInterval);
+      cheevoStatusTimerInterval = null;
+    }
   }
 
   function closeOverlay() {
@@ -1545,9 +1602,6 @@ else
 </html>
 HTMLEOF
         echo "${GREEN}[✓]${NC} index.html создан: $HUB_DIR/html/index.html"
-    else
-        echo "${CYAN}[*]${NC} index.html уже существует, не трогаю (возможны ручные правки)"
-    fi
 
     # Иконки + манифест — без них "Добавить на экран" (Android/iOS) не
     # находит нормальную иконку и рисует заглушку: залитый кружок с
@@ -1555,8 +1609,9 @@ HTMLEOF
     # с закруглённым фоном и рамкой; maskable — фон до самых краёв (систем
     # сама обрежет по своей маске: круг/капля/квадрат), текст в безопасной
     # зоне по центру.
-    if [ ! -f "$HUB_DIR/html/icon-512.png" ]; then
-        base64 -d > "$HUB_DIR/html/icon-512.png" << 'ICONEOF'
+    # Перезаписываем всегда, когда шаг реально выполняется - см. пояснение
+    # у index.html выше про "u) Обновить" в меню.
+    base64 -d > "$HUB_DIR/html/icon-512.png" << 'ICONEOF'
 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
 ICONEOF
         base64 -d > "$HUB_DIR/html/icon-192.png" << 'ICON192EOF'
@@ -1586,9 +1641,7 @@ ICONMASK192EOF
 MANIFESTEOF
         echo "${GREEN}[✓]${NC} Иконки и манифест созданы — 'Добавить на экран' теперь покажет"
         echo "    настоящую иконку, а не заглушку с бейджиком браузера"
-    fi
 
-    if [ ! -f "$HUB_DIR/html/sw.js" ]; then
         cat > "$HUB_DIR/html/sw.js" << 'SWEOF'
 // Service Worker — без него push-уведомления невозможны в принципе:
 // событие "push" может обработать только активный service worker,
@@ -1631,7 +1684,6 @@ self.addEventListener('notificationclick', (event) => {
 });
 SWEOF
         echo "${GREEN}[✓]${NC} Service Worker создан: $HUB_DIR/html/sw.js"
-    fi
 
     # cards.json — если карточки от других модулей уже накопились в TSV
     # (сервис-модуль отработал раньше хаба вручную/повторно) ИЛИ список
@@ -1699,8 +1751,9 @@ def next_unique_id():
         return candidate
 SHAREDEOF
 
-    if [ ! -f "$HUB_DIR/backend/app.py" ]; then
-        cat > "$HUB_DIR/backend/app.py" << 'PYEOF'
+    # Перезаписываем всегда, когда шаг реально выполняется - см. пояснение
+    # у index.html выше про "u) Обновить" в меню.
+    cat > "$HUB_DIR/backend/app.py" << 'PYEOF'
 #!/usr/bin/env python3
 """
 NEXUS404 Interface — backend хаба. Только стандартная библиотека Python
@@ -2900,12 +2953,10 @@ if __name__ == "__main__":
     server.serve_forever()
 PYEOF
         echo "${GREEN}[✓]${NC} backend/app.py создан: $HUB_DIR/backend/app.py"
-    else
-        echo "${CYAN}[*]${NC} backend/app.py уже существует, не трогаю (возможны ручные правки)"
-    fi
 
-    if [ ! -f "$HUB_DIR/docker-compose.yml" ]; then
-        cat > "$HUB_DIR/docker-compose.yml" << EOF
+    # Перезаписываем всегда, когда шаг реально выполняется - см. пояснение
+    # у index.html выше про "u) Обновить" в меню.
+    cat > "$HUB_DIR/docker-compose.yml" << EOF
 services:
   nexus404:
     image: python:3.12-alpine
@@ -2935,13 +2986,17 @@ networks:
     external: true
 EOF
         echo "${GREEN}[✓]${NC} docker-compose.yml создан: $HUB_DIR/docker-compose.yml"
-    else
-        echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-    fi
 
     # Порт наружу НЕ публикуется — единственный путь снаружи идёт через
     # Caddy (шаг 2), изнутри — по имени контейнера dk_nexus404:80.
     run_spinner "Запуск NEXUS404 Interface" "dk_compose_up '$HUB_DIR'"
+    # "docker compose up -d" НЕ перезапускает уже работающий контейнер,
+    # если сама конфигурация compose не изменилась — а файлы внутри
+    # bind-mount (html/backend/data) при этом сравнении не учитываются
+    # вообще. Без явного restart переписанные выше файлы просто повиснут
+    # на диске, а старый процесс продолжит работать со старым кодом в
+    # памяти — критично для "u) Обновить" в меню (сброс STATEFILE).
+    docker restart dk_nexus404 >/dev/null 2>>"$LOGFILE" || true
 
     echo "${GREEN}[✓]${NC} Шаг 1 завершён успешно"
     mark_done "step4_1"

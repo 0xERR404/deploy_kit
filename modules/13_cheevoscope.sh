@@ -158,14 +158,15 @@ CHEEVO_MANUAL_APPIDS_FILE = "/app/data/cheevoscope_manual_appids.json"
 
 # Пауза между запросами к Steam API (сек) — общий throttle на весь процесс,
 # соблюдается даже при параллельных запросах (см. CheevoRateLimiter).
-# Ускорено с исходных 0.25с/10 параллельных — эти конкретные эндпоинты
-# (GetPlayerAchievements/GetGlobalAchievementPercentagesForApp) легковесные
-# и намного терпимее к частоте, чем витрина store.steampowered.com ниже.
-# Retry с экспоненциальной паузой на 429/5xx (см. _cheevo_get_with_retry)
-# страхует, если Steam всё же начнёт притормаживать — просто чуть
-# медленнее для конкретной игры, а не падение всего обновления.
-CHEEVO_REQUEST_DELAY = 0.05
-CHEEVO_API_CONCURRENCY = 20
+# Ускорено с исходных 0.25с/10 параллельных, но НЕ агрессивно: первая
+# попытка (0.05с/20) на практике могла спровоцировать реальные 429 —
+# burst-лимиты Steam на эти конкретные эндпоинты не документированы
+# точно и оказались строже, чем ожидалось. 0.1с/12 — по-прежнему вдвое
+# быстрее оригинала, но с большим запасом. Retry с экспоненциальной
+# паузой на 429/5xx (см. _cheevo_get_with_retry) страхует и здесь — но
+# лучше пореже ловить 429, чем полагаться только на ретраи.
+CHEEVO_REQUEST_DELAY = 0.1
+CHEEVO_API_CONCURRENCY = 12
 # Витрина store.steampowered.com — отдельный, гораздо более жёсткий лимит
 # (~200 запросов/5 минут), поэтому темп и параллелизм ниже.
 CHEEVO_STORE_REQUEST_DELAY = 0.8
@@ -1680,6 +1681,7 @@ def widget_cheevoscope():
     if steam_report is None:
         return {
             "generated_at": None,
+            "status": {"steam": _cheevo_read_status(CHEEVO_STATUS_FILE), "retro": None},
             "steam": {"summary": {}, "games": [], "rarity_tiers": {}, "rarest": [], "heatmap": {}},
             "retro": None,
         }
@@ -1691,8 +1693,15 @@ def widget_cheevoscope():
     retro_summary = (retro_report or {}).get("summary") or {}
     has_retro = bool(retro_summary.get("games_count"))
 
+    steam_status = _cheevo_read_status(CHEEVO_STATUS_FILE)
+    retro_status = _cheevo_read_status(CHEEVO_RETRO_STATUS_FILE) if has_retro else None
+
     return {
         "generated_at": steam_report.get("generated_at"),
+        "status": {
+            "steam": steam_status,
+            "retro": retro_status,
+        },
         "steam": {
             "summary": steam_report.get("summary") or {},
             "games": steam_report.get("games_grid") or [],

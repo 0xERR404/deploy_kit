@@ -289,8 +289,10 @@ EOF
         echo "${YELLOW}[?]${NC} ufw не найден — откройте 80/443 в своём файрволе вручную"
     fi
 
-    if [ ! -f "$CADDY_DIR/docker-compose.yml" ]; then
-        cat > "$CADDY_DIR/docker-compose.yml" << EOF
+    # Перезаписываем всегда — чистая генерируемая конфигурация, не
+    # предназначена для ручных правок (в отличие от Caddyfile выше).
+    # См. пояснение в 04_nexus404.sh про "u) Обновить" в меню.
+    cat > "$CADDY_DIR/docker-compose.yml" << EOF
 services:
   caddy:
     image: caddy:2-alpine
@@ -313,9 +315,6 @@ networks:
     external: true
 EOF
         echo "${GREEN}[✓]${NC} docker-compose.yml создан: $CADDY_DIR/docker-compose.yml"
-    else
-        echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-    fi
 
     # -----------------------------------------------------------------------
     # Базовый (корневой) домен. NEXUS404 Interface рассчитан на домен (без
@@ -374,6 +373,11 @@ EOF
     fi
 
     run_spinner "Запуск Caddy" "dk_compose_up '$CADDY_DIR'"
+    # docker compose up -d не пересоздаст уже работающий контейнер, если
+    # сама конфигурация не поменялась с точки зрения Docker — но нам
+    # нужно гарантированно подхватить переписанный docker-compose.yml при
+    # повторном прогоне ("u) Обновить" в меню).
+    (cd "$CADDY_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
     echo "${GREEN}[✓]${NC} Шаг 5 завершён успешно"
     mark_done "step2_5"

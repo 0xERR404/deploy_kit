@@ -199,8 +199,7 @@ else
         # для API-запросов изнутри той же docker-сети.
         BESZEL_APP_URL="http://dk_beszel:8090"
 
-        if [ ! -f "$BESZEL_HUB_DIR/docker-compose.yml" ]; then
-            cat > "$BESZEL_HUB_DIR/docker-compose.yml" << EOF
+        cat > "$BESZEL_HUB_DIR/docker-compose.yml" << EOF
 services:
   beszel:
     image: henrygd/beszel:latest
@@ -219,12 +218,10 @@ networks:
   ${DK_NETWORK}:
     external: true
 EOF
-            echo "${GREEN}[✓]${NC} docker-compose.yml создан: $BESZEL_HUB_DIR/docker-compose.yml"
-        else
-            echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-        fi
+        echo "${GREEN}[✓]${NC} docker-compose.yml создан: $BESZEL_HUB_DIR/docker-compose.yml"
 
         run_spinner "Запуск хаба Beszel" "dk_compose_up '$BESZEL_HUB_DIR'"
+        (cd "$BESZEL_HUB_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
         echo "${CYAN}[*]${NC} Жду готовности хаба..."
         BESZEL_READY=0
@@ -436,8 +433,7 @@ else
 
     mkdir -p "$AGENT_DIR/data"
 
-    if [ ! -f "$AGENT_DIR/docker-compose.yml" ]; then
-        cat > "$AGENT_DIR/docker-compose.yml" << EOF
+    cat > "$AGENT_DIR/docker-compose.yml" << EOF
 services:
   beszel-agent:
     image: henrygd/beszel-agent:latest
@@ -458,12 +454,10 @@ networks:
   ${DK_NETWORK}:
     external: true
 EOF
-        echo "${GREEN}[✓]${NC} docker-compose.yml создан: $AGENT_DIR/docker-compose.yml"
-    else
-        echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-    fi
+    echo "${GREEN}[✓]${NC} docker-compose.yml создан: $AGENT_DIR/docker-compose.yml"
 
     run_spinner "Запуск агента Beszel" "dk_compose_up '$AGENT_DIR'"
+    (cd "$AGENT_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
     echo "${CYAN}[*]${NC} Жду регистрации агента в хабе..."
     API_BASE=$(beszel_admin_api_base)

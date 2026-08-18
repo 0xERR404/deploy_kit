@@ -214,8 +214,7 @@ EOF
             echo "${CYAN}[*]${NC} server.yml уже существует, не трогаю (возможны ручные правки)"
         fi
 
-        if [ ! -f "$NTFY_DIR/docker-compose.yml" ]; then
-            cat > "$NTFY_DIR/docker-compose.yml" << EOF
+        cat > "$NTFY_DIR/docker-compose.yml" << EOF
 services:
   ntfy:
     image: binwiederhier/ntfy:latest
@@ -234,15 +233,13 @@ networks:
   ${DK_NETWORK}:
     external: true
 EOF
-            echo "${GREEN}[✓]${NC} docker-compose.yml создан: $NTFY_DIR/docker-compose.yml"
-            echo "${CYAN}[*]${NC} Порт слушает только 127.0.0.1 (сам хост) — снаружи сервера"
-            echo "    недоступен ни при каких обстоятельствах. Остальные контейнеры"
-            echo "    (виджет хаба) обращаются по имени dk_ntfy:80 внутри docker-сети."
-        else
-            echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-        fi
+        echo "${GREEN}[✓]${NC} docker-compose.yml создан: $NTFY_DIR/docker-compose.yml"
+        echo "${CYAN}[*]${NC} Порт слушает только 127.0.0.1 (сам хост) — снаружи сервера"
+        echo "    недоступен ни при каких обстоятельствах. Остальные контейнеры"
+        echo "    (виджет хаба) обращаются по имени dk_ntfy:80 внутри docker-сети."
 
         run_spinner "Запуск ntfy" "dk_compose_up '$NTFY_DIR'"
+        (cd "$NTFY_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
         echo "${CYAN}[*]${NC} Жду готовности ntfy..."
         NTFY_READY=0

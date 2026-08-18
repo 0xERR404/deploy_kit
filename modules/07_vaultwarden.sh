@@ -274,6 +274,7 @@ else
                 VAULT_SSO_CLIENT_ID_FIX=$(cat "${VAULT_SSO_CLIENT_SECRET_FILE}.id")
                 sed -i "s#SSO_CLIENT_ID: \"vaultwarden\"#SSO_CLIENT_ID: \"${VAULT_SSO_CLIENT_ID_FIX}\"#" "$VAULT_DIR/docker-compose.yml"
                 run_spinner "Применяю исправленный SSO_CLIENT_ID" "dk_compose_up '$VAULT_DIR'"
+                (cd "$VAULT_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
                 echo "${GREEN}[✓]${NC} SSO_CLIENT_ID исправлен на настоящий ID из Pocket ID"
             else
                 echo "${RED}[!]${NC} Не нашёл сохранённый client_id"
@@ -449,6 +450,7 @@ else
         fi
 
         run_spinner "Применяю SSO-настройки" "dk_compose_up '$VAULT_DIR'"
+        (cd "$VAULT_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
         echo "${CYAN}[*]${NC} Жду перезапуска..."
         VAULT_READY=0
@@ -526,6 +528,7 @@ else
         sed -i 's/SIGNUPS_ALLOWED: "true"/SIGNUPS_ALLOWED: "false"/' "$VAULT_DIR/docker-compose.yml"
 
         run_spinner "Применяю: регистрация закрыта" "dk_compose_up '$VAULT_DIR'"
+        (cd "$VAULT_DIR" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
         echo "${CYAN}[*]${NC} Жду перезапуска..."
         VAULT_READY=0

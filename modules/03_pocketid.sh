@@ -155,8 +155,7 @@ EOF
         echo "${CYAN}[*]${NC} .env уже существует, не трогаю (возможны ручные правки)"
     fi
 
-    if [ ! -f "$POCKETID_DIR_REF/docker-compose.yml" ]; then
-        cat > "$POCKETID_DIR_REF/docker-compose.yml" << EOF
+    cat > "$POCKETID_DIR_REF/docker-compose.yml" << EOF
 services:
   pocket-id:
     image: pocketid/pocket-id:v2
@@ -181,9 +180,6 @@ networks:
     external: true
 EOF
         echo "${GREEN}[✓]${NC} docker-compose.yml создан: $POCKETID_DIR_REF/docker-compose.yml"
-    else
-        echo "${CYAN}[*]${NC} docker-compose.yml уже существует, не трогаю"
-    fi
 
     # Порт публикуется ТОЛЬКО на 127.0.0.1 (сам хост, не интернет) — нужен
     # для хостовых curl-вызовов самого deploy_kit (POCKETID_API_BASE_REF в
@@ -193,6 +189,7 @@ EOF
     # (POCKETID_URL_REF в common.sh) — это отдельный, docker-сетевой адрес,
     # не связанный с портом на 127.0.0.1 выше.
     run_spinner "Запуск Pocket ID" "dk_compose_up '$POCKETID_DIR_REF'"
+    (cd "$POCKETID_DIR_REF" && docker compose up -d --force-recreate >/dev/null 2>>"$LOGFILE") || true
 
     echo "${CYAN}[*]${NC} Жду готовности Pocket ID..."
     POCKETID_READY=0
