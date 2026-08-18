@@ -36,6 +36,14 @@ USERFILE="$DK_DIR/deploy_kit.newuser"
 PORTFILE="$DK_DIR/deploy_kit.sshport"
 AUTHMETHODFILE="$DK_DIR/deploy_kit.authmethod"
 DOMAINFILE="$DK_DIR/deploy_kit.domain"
+# Общий логин/почта — вводится один раз в любом модуле, дальше
+# подставляется как значение по умолчанию везде, где ещё раз спросят
+# логин/почту (тот же принцип, что DOMAINFILE — не переспрашивать то,
+# что уже известно). USERFILE (логин sudo-пользователя из базовой
+# настройки) для этого не подходит — это системный логин на сервер,
+# не обязательно тот же логин, что нужен для админки Forgejo/ntfy/etc.
+DK_SHARED_LOGIN_FILE="$DK_DIR/deploy_kit.shared_login"
+DK_SHARED_EMAIL_FILE="$DK_DIR/deploy_kit.shared_email"
 HEALTHLOG="$DK_DIR/deploy_kit_health.log"
 NTFY_CONF="$DK_DIR/deploy_kit.ntfy.conf"
 NTFYLOG="$DK_DIR/deploy_kit_ntfy_events.log"

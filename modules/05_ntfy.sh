@@ -281,9 +281,10 @@ else
         echo "    и служебный токен для notify_send"
         echo ""
 
-        NTFY_ADMIN_USER_DEFAULT="admin"
+        NTFY_ADMIN_USER_DEFAULT=$(read_or_default "$DK_SHARED_LOGIN_FILE" "admin")
         read -rp "${YELLOW}[?]${NC} Логин администратора ntfy (Enter — '$NTFY_ADMIN_USER_DEFAULT'): " NTFY_ADMIN_USER_INPUT || { echo "${RED}[!]${NC} Не удалось прочитать ввод"; exit 1; }
         NTFY_ADMIN_USER="${NTFY_ADMIN_USER_INPUT:-$NTFY_ADMIN_USER_DEFAULT}"
+        echo "$NTFY_ADMIN_USER" > "$DK_SHARED_LOGIN_FILE"
 
         NTFY_ADMIN_PASS=""
         while true; do

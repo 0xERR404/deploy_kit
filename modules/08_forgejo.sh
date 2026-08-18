@@ -647,13 +647,20 @@ else
     echo "  ШАГ 3: Администратор"
     echo "===========================================================================${NC}"
 
-    FORGEJO_ADMIN_USER=$(read_or_default "$USERFILE" "admin")
+    # Логин: общий сохранённый (если уже вводили в ntfy/etc) важнее
+    # системного логина сервера — это разные вещи (SSH-логин на сервер vs
+    # логин в веб-админках сервисов), но если ничего ещё не вводили —
+    # системный логин всё равно приличный дефолт.
+    FORGEJO_ADMIN_USER=$(read_or_default "$DK_SHARED_LOGIN_FILE" "$(read_or_default "$USERFILE" "admin")")
+    echo "$FORGEJO_ADMIN_USER" > "$DK_SHARED_LOGIN_FILE"
 
     # Если Pocket ID установлена — подставляем почту администратора оттуда
     # (GET /api/users с admin-ключом, поле email — проверено по исходникам
     # Pocket ID, dto.UserDto). Не "подсматриваем чужое" — это твоя же учётка
     # администратора, которую ты сам заводил в Pocket ID; здесь просто не
     # заставляем вводить её второй раз руками, достаточно подтвердить Enter.
+    # Если Pocket ID недоступна — берём то, что уже вводили в другом
+    # модуле (общий файл), тот же принцип, что и с логином выше.
     FORGEJO_EMAIL_DEFAULT=""
     if dk_pocketid_available; then
         POCKETID_API_KEY_S3=$(cat "$POCKETID_API_KEY_FILE")
@@ -663,6 +670,7 @@ else
             FORGEJO_EMAIL_DEFAULT=$(printf '%s' "$POCKETID_USERS_RESP" | jq -r '.data[]? | select(.isAdmin==true) | .email // empty' 2>/dev/null | head -n1)
         fi
     fi
+    [ -z "$FORGEJO_EMAIL_DEFAULT" ] && FORGEJO_EMAIL_DEFAULT=$(read_or_default "$DK_SHARED_EMAIL_FILE" "")
 
     FORGEJO_ADMIN_EMAIL=""
     while true; do
@@ -674,6 +682,7 @@ else
         fi
         if [[ "$EMAIL_INPUT" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
             FORGEJO_ADMIN_EMAIL="$EMAIL_INPUT"
+            echo "$FORGEJO_ADMIN_EMAIL" > "$DK_SHARED_EMAIL_FILE"
             break
         fi
         echo "${RED}[!]${NC} Похоже, это не email — попробуйте снова"

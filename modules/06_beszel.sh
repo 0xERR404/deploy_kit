@@ -290,11 +290,18 @@ else
         echo ""
 
         EMAIL_RE='^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+        BESZEL_EMAIL_DEFAULT=$(read_or_default "$DK_SHARED_EMAIL_FILE" "")
         BESZEL_EMAIL=""
         while [ -z "$BESZEL_EMAIL" ]; do
-            read -rp "${YELLOW}[?]${NC} Email администратора Beszel: " EMAIL_INPUT || { echo "${RED}[!]${NC} Не удалось прочитать ввод"; exit 1; }
+            if [ -n "$BESZEL_EMAIL_DEFAULT" ]; then
+                read -rp "${YELLOW}[?]${NC} Email администратора Beszel (Enter — '$BESZEL_EMAIL_DEFAULT'): " EMAIL_INPUT || { echo "${RED}[!]${NC} Не удалось прочитать ввод"; exit 1; }
+                EMAIL_INPUT="${EMAIL_INPUT:-$BESZEL_EMAIL_DEFAULT}"
+            else
+                read -rp "${YELLOW}[?]${NC} Email администратора Beszel: " EMAIL_INPUT || { echo "${RED}[!]${NC} Не удалось прочитать ввод"; exit 1; }
+            fi
             if [[ "$EMAIL_INPUT" =~ $EMAIL_RE ]]; then
                 BESZEL_EMAIL="$EMAIL_INPUT"
+                echo "$BESZEL_EMAIL" > "$DK_SHARED_EMAIL_FILE"
             else
                 echo "${RED}[!]${NC} Некорректный email, попробуйте снова"
             fi
