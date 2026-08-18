@@ -332,6 +332,13 @@ else
   </div>
 </div>
 
+<div class="ms-modal-backdrop" id="cheevoAchModalBackdrop">
+  <div class="ms-modal-box" style="max-width:720px;">
+    <div class="ms-modal-header"><span class="title" id="cheevoAchModalTitle">Достижения</span><button class="ms-btn" onclick="closeCheevoAchModal()">✕</button></div>
+    <div class="ms-modal-body" id="cheevoAchModalBody"></div>
+  </div>
+</div>
+
 <script>
   let currentCards = [];
   // Самописные виджеты (без отдельного сервера под ними) — используется и
@@ -831,8 +838,12 @@ else
     const level = n => n === 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4));
     const weeks = [];
     for (let w = 0; w < Math.ceil(days / 7); w++) weeks.push(cells.slice(w * 7, w * 7 + 7));
-    return weeks.map(week => `
-      <div style="display:flex;flex-direction:column;gap:3px;">${week.map(n => `<div style="width:13px;height:13px;border-radius:3px;background:${colors[level(n)]};"></div>`).join('')}</div>
+    // Одна строка = одна неделя (7 клеток горизонтально), недели идут
+    // сверху вниз: самая новая — сверху, проваливаются вниз по мере
+    // накопления истории — узкая колонка (1/3 ряда) не мешает, высота
+    // карточки просто растёт вместе с данными.
+    return [...weeks].reverse().map(week => `
+      <div style="display:flex;gap:3px;">${week.map(n => `<div style="width:13px;height:13px;border-radius:3px;background:${colors[level(n)]};flex-shrink:0;"></div>`).join('')}</div>
     `).join('');
   }
 
@@ -850,10 +861,10 @@ else
     if (options && options.scrollX) {
       wrapStyle = 'display:flex;gap:2px;overflow-x:auto;';
       wrapClass = 'no-scrollbar';
-    } else if (options && options.wrap) {
-      wrapStyle = 'display:flex;flex-wrap:wrap;gap:4px;';
+    } else if (options && options.stack) {
+      wrapStyle = 'display:flex;flex-direction:column;gap:3px;';
     }
-    return `<div class="card static" style="align-items:stretch;cursor:default;">
+    return `<div class="card static" style="align-items:stretch;cursor:default;height:100%;">
       <div class="top" style="width:100%;">
         <div class="name" style="margin-bottom:6px;">${escapeHtml(title)}</div>
         <div class="${wrapClass}" style="${wrapStyle}">${content}</div>
@@ -965,9 +976,12 @@ else
         </div>
       </div>`;
     const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(s.rarest));
-    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { wrap: true });
-    const topRow = `<div class="grid" style="margin-bottom:14px;">${summaryCard}${rarestCard}</div>`;
-    const heatmapRow = heatmapCard ? `<div style="margin-bottom:14px;">${heatmapCard}</div>` : '';
+    const heatmapCard = cheevoInfoCard('активность за год', cheevoHeatmap(s.heatmap), { stack: true });
+    const topRow = `<div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">${summaryCard}</div>
+      <div style="flex:1;min-width:220px;">${rarestCard}</div>
+      <div style="flex:1;min-width:220px;">${heatmapCard}</div>
+    </div>`;
     const games = s.games || [];
     const gamesGrid = games.length
       ? `<div class="grid">${games.map(g => cheevoGameCard(
@@ -975,7 +989,7 @@ else
           g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${escapeHtml(g.name || '').replace(/'/g, "\\'")}')` : '',
         )).join('')}</div>`
       : `<div class="widget-placeholder">игр пока нет — нажмите "обновить"</div>`;
-    return topRow + heatmapRow + gamesGrid;
+    return topRow + gamesGrid;
   }
 
   function renderCheevoRetroTab(r) {
@@ -1006,7 +1020,11 @@ else
       : '';
     const consolesCard = cheevoInfoCard('очки по консолям', consolesContent);
     const rarestCard = cheevoInfoCard('редчайшие достижения', cheevoRarestList(r.rarest));
-    const topRow = `<div class="grid" style="margin-bottom:14px;">${summaryCard}${consolesCard}${rarestCard}</div>`;
+    const topRow = `<div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">${summaryCard}</div>
+      <div style="flex:1;min-width:220px;">${consolesCard}</div>
+      <div style="flex:1;min-width:220px;">${rarestCard}</div>
+    </div>`;
     const games = r.games || [];
     const gamesGrid = games.length
       ? `<div style="display:flex;flex-direction:column;gap:8px;">${games.map(cheevoRetroRow).join('')}</div>`
@@ -1019,7 +1037,7 @@ else
     const sum = s.summary || {};
     const rsum = (r && r.summary) || {};
     const rprofile = (r && r.profile) || {};
-    const summariesRow = `<div class="grid" style="margin-bottom:14px;">
+    const steamSummaryCard = `
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">steam</div>
@@ -1027,7 +1045,8 @@ else
             ['игр', sum.games_count ?? 0], ['часов', sum.total_hours ?? 0], ['ачивок', `${sum.achievements_overall_percent ?? 0}%`],
           ])}</div>
         </div>
-      </div>
+      </div>`;
+    const raSummaryCard = `
       <div class="card static" style="align-items:stretch;cursor:default;">
         <div class="top" style="width:100%;">
           <div class="name" style="margin-bottom:8px;">retroachievements</div>
@@ -1035,21 +1054,25 @@ else
             ['игр', rsum.games_count ?? 0], ['очки', rprofile.points ?? 0], ['% хардкор', `${rsum.overall_hardcore_percent ?? 0}%`],
           ])}</div>
         </div>
-      </div>
+      </div>`;
+    const summariesRow = `<div style="display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">${steamSummaryCard}</div>
+      <div style="flex:1;min-width:220px;">${raSummaryCard}</div>
     </div>`;
     const steamRarest = cheevoInfoCard('редчайшие (steam)', cheevoRarestList(s.rarest));
     const raRarest = cheevoInfoCard('редчайшие (RA)', cheevoRarestList(r && r.rarest));
-    const rarestRow = (steamRarest || raRarest) ? `<div class="grid">${steamRarest || '<div></div>'}${raRarest || '<div></div>'}</div>` : '';
+    const rarestRow = (steamRarest || raRarest) ? `<div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;">${steamRarest}</div>
+      <div style="flex:1;min-width:220px;">${raRarest}</div>
+    </div>` : '';
     return summariesRow + rarestRow;
   }
 
   async function openCheevoAchievements(platform, id, name) {
-    const overlay = document.getElementById('serviceOverlay');
-    document.getElementById('overlayTitle').textContent = name;
-    const body = document.getElementById('overlayBody');
+    document.getElementById('cheevoAchModalTitle').textContent = name;
+    const body = document.getElementById('cheevoAchModalBody');
     body.innerHTML = `<div class="widget-placeholder">загрузка ачивок...</div>`;
-    overlay.classList.add('open');
-    history.pushState({ nexusOverlay: true }, '', location.href);
+    document.getElementById('cheevoAchModalBackdrop').classList.add('open');
     const url = platform === 'retro' ? `/api/cheevoscope/retro/game/${id}/achievements` : `/api/cheevoscope/game/${id}/achievements`;
     try {
       const res = await fetch(url);
@@ -1058,7 +1081,7 @@ else
         body.innerHTML = `<div class="widget-placeholder">данных по ачивкам нет</div>`;
         return;
       }
-      body.innerHTML = `<div class="widget-body"><div class="grid stack-grid">${data.achievements.map(a => {
+      body.innerHTML = `<div class="grid stack-grid">${data.achievements.map(a => {
         const icon = platform === 'retro' ? a.badge_url : (a.unlocked ? a.icon : (a.icon_gray || a.icon));
         return `
         <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};">
@@ -1069,10 +1092,14 @@ else
           </div>
           <div style="font-size:0.7rem;color:var(--amber);flex-shrink:0;">${a.global_percent ?? '?'}%</div>
         </div>`;
-      }).join('')}</div></div>`;
+      }).join('')}</div>`;
     } catch (e) {
       body.innerHTML = `<div class="widget-placeholder">не удалось загрузить: ${escapeHtml(e.message)}</div>`;
     }
+  }
+
+  function closeCheevoAchModal() {
+    document.getElementById('cheevoAchModalBackdrop').classList.remove('open');
   }
 
   // ===== WalletScope =====
@@ -1619,22 +1646,28 @@ else
   window.addEventListener('popstate', closeOverlayDom);
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeOverlay(); return; }
+    const openModal = document.querySelector('.ms-modal-backdrop.open');
+    if (e.key === 'Escape') {
+      if (openModal) { openModal.classList.remove('open'); return; }
+      closeOverlay();
+      return;
+    }
     // Backspace как "назад" — только на десктопе (веб), только пока оверлей
     // реально открыт, и только если фокус НЕ в поле ввода/textarea/
     // редактируемом тексте — иначе обычное удаление символа при наборе
-    // текста (например, в редакторе поста MemoScope) закрывало бы оверлей
-    // вместо стирания буквы.
+    // текста (например, в редакторе поста MemoScope) закрывало бы окно
+    // вместо стирания буквы. Если открыта модалка (пост/транзакция/
+    // ачивки) — закрывает сначала её, не весь оверлей позади.
     if (e.key === 'Backspace') {
       const overlay = document.getElementById('serviceOverlay');
       if (!overlay || !overlay.classList.contains('open')) return;
-      if (document.querySelector('.ms-modal-backdrop.open')) return;
       const active = document.activeElement;
       const isEditable = active && (
         active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable
       );
       if (isEditable) return;
       e.preventDefault();
+      if (openModal) { openModal.classList.remove('open'); return; }
       closeOverlay();
     }
   });
