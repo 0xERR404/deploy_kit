@@ -134,7 +134,7 @@ else
   .stack-grid{ grid-template-columns:1fr !important; }
   @media(max-width:1100px){ .grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
   @media(max-width:760px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; } }
-  @media(max-width:420px){ .grid{ grid-template-columns:1fr; } .grid-2col-mobile{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px; } }
+  @media(max-width:420px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; } .grid-2col-mobile{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px; } }
   @media(max-width:760px){
     .wallet-card-main{ order:1; }
     .wallet-card-deposit{ order:2; }
@@ -216,7 +216,7 @@ else
   .balance-label{ font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); }
   .balance-amount{ font-size:clamp(1.15rem, 4vw, 1.5rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
   .rates-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
-  .rate-chip{ background:rgba(255,255,255,0.03); border-radius:6px; padding:8px 10px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .rate-chip{ aspect-ratio:1; border-radius:6px; padding:8px; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; }
   .rate-chip .sym{ color:var(--muted); font-size:0.65rem; text-transform:uppercase; }
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tx-amount.income{ color:var(--green); }
@@ -247,14 +247,17 @@ else
     .service-overlay-bar .back{ padding:4px 10px; font-size:0.65rem; }
     .service-overlay-bar #overlayActions button:not(.cheevo-icon-btn){ font-size:0.58rem !important; padding:3px 5px !important; }
     .service-overlay-bar #overlayActions .cheevo-icon-btn{ font-size:1.05rem !important; padding:2px 12px !important; height:30px !important; }
-    /* Ряд 1: prompt слева, "online" справа (внутри header-right — он
-       теперь идёт первым визуально через order, хотя в разметке стоит
-       вторым). Ряд 2 (колокольчик+выйти) — принудительно на новую строку
-       (flex-basis:100% в flex-wrap-контейнере header-right всегда
-       переносит элемент целиком), прижат к правому краю своей строки. */
-    .header-right{ gap:4px 10px; }
+    /* header-right на мобильном "растворяется" (display:contents) — без
+       этого order/flex-basis у status-indicator/status-actions работали
+       бы только друг относительно друга ВНУТРИ обёртки, а не относительно
+       prompt на уровне всей шапки (обёртка сама была бы одним "куском",
+       который header-row мог бы отправить вообще куда угодно как единое
+       целое — именно это и плыло на практике). Ряд 1: prompt слева,
+       "online" справа. Ряд 2 (колокольчик+выйти) — на новую строку
+       (flex-basis:100% всегда переносит элемент целиком), прижат вправо. */
+    .header-right{ display:contents; }
     .status-indicator{ order:1; }
-    .status-actions{ order:2; flex-basis:100%; justify-content:flex-end; }
+    .status-actions{ order:2; flex-basis:100%; justify-content:flex-end; gap:14px; }
   }
   @media(max-width:420px){
     .metrics-row{ flex-wrap:nowrap; }
@@ -614,10 +617,25 @@ else
     return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  // Для текста, который идёт ВНУТРЬ одинарных JS-кавычек onclick="...",
+  // а сам onclick лежит внутри HTML-атрибута (двойные кавычки) — экраниро-
+  // вать нужно строго в этом порядке: сначала JS-строку (иначе апостроф
+  // сломает саму строку), потом уже итог целиком под HTML-атрибут. Раньше
+  // порядок был обратный (сначала escapeHtml, потом replace апострофа) —
+  // escapeHtml уже переводил ' в &#39;, так что последующий replace не
+  // находил в тексте ни одного литерального апострофа. Браузер же при
+  // разборе HTML-атрибута расшифровывает &#39; обратно в ' — на выходе
+  // получался неэкранированный апостроф прямо посреди одинарной JS-строки,
+  // ломающий её (любое название вида "Assassin's Creed" — а таких в
+  // библиотеках полно — и клик по карточке молча переставал работать).
+  function cheevoJsAttr(s) {
+    return escapeHtml(String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  }
+
   // Автообновление в реальном времени для открытого виджета Beszel — сам
   // Beszel обновляет метрики раз в несколько секунд на своей стороне,
   // но наш виджет раньше подгружал их один раз при открытии и больше не
-  // трогал, пока не закроешь/откроешь заново. taймер запускается только
+  // трогал, пока не закроешь/откроешь заново. Таймер запускается только
   // на время, пока оверлей с этим виджетом открыт (см. closeOverlayDom).
   let widgetAutoRefreshTimer = null;
   const WIDGET_AUTOREFRESH_MS = {
@@ -1059,7 +1077,7 @@ else
     const statusText = g.status === 'mastered' ? 'замастерено' : (g.status === 'completed' ? 'завершено' : 'в процессе');
     const barColor = g.status === 'mastered' ? 'var(--amber)' : 'var(--accent)';
     const icon = g.image_icon ? `<img src="https://media.retroachievements.org${escapeHtml(g.image_icon)}" loading="lazy" style="width:40px;height:40px;border-radius:6px;flex-shrink:0;object-fit:cover;">` : '';
-    return `<div class="card static" data-name="${escapeHtml((g.title || '').toLowerCase())}" data-hours="0" data-hardcore="${g.hardcore_percent ?? 0}" data-softcore="${g.softcore_percent ?? 0}" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;min-height:0;padding:10px 12px;" onclick="openCheevoAchievements('retro', ${g.game_id}, '${escapeHtml(g.title || '').replace(/'/g, "\\'")}')">
+    return `<div class="card static" data-name="${escapeHtml((g.title || '').toLowerCase())}" data-hours="0" data-hardcore="${g.hardcore_percent ?? 0}" data-softcore="${g.softcore_percent ?? 0}" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;min-height:0;padding:10px 12px;" onclick="openCheevoAchievements('retro', ${g.game_id}, '${cheevoJsAttr(g.title)}')">
       ${icon}
       <div style="min-width:0;flex:1;">
         <div class="name" style="white-space:normal;">${escapeHtml(g.title || '')}</div>
@@ -1134,7 +1152,7 @@ else
       games.slice(0, withAch.length).every(g => withAch.includes(g));
     const cardsHtml = (list) => list.map(g => cheevoGameCard(
       g.appid, g,
-      g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${escapeHtml(g.name || '').replace(/'/g, "\\'")}')` : '',
+      g.achievements_total ? `openCheevoAchievements('steam', ${g.appid}, '${cheevoJsAttr(g.name)}')` : '',
     )).join('');
     if (!isCleanSplit || !withoutAch.length || !withAch.length) {
       return cardsHtml(games);
@@ -1271,6 +1289,7 @@ else
     const body = document.getElementById('cheevoAchModalBody');
     body.innerHTML = `<div class="widget-placeholder">загрузка ачивок...</div>`;
     document.getElementById('cheevoAchModalBackdrop').classList.add('open');
+    history.pushState({ modalOpen: true }, '', location.href);
     const url = platform === 'retro' ? `/api/cheevoscope/retro/game/${id}/achievements` : `/api/cheevoscope/game/${id}/achievements`;
     try {
       const res = await fetch(url);
@@ -1280,7 +1299,8 @@ else
         return;
       }
       body.innerHTML = `<div class="grid stack-grid">${data.achievements.map(a => {
-        const icon = platform === 'retro' ? a.badge_url : (a.unlocked ? a.icon : (a.icon_gray || a.icon));
+        const iconFile = platform === 'retro' ? a.badge_url : (a.unlocked ? a.icon : (a.icon_gray || a.icon));
+        const icon = iconFile ? `/api/cheevoscope/local-image/${encodeURIComponent(iconFile)}` : '';
         const color = cheevoTierColor(a.global_percent);
         return `
         <div class="card static" style="flex-direction:row;align-items:center;gap:10px;cursor:default;opacity:${a.unlocked ? '1' : '0.5'};min-height:0;padding:8px 10px;border-color:${color};box-shadow:0 0 10px ${color}30;">
@@ -1297,8 +1317,17 @@ else
     }
   }
 
+  // Закрытие модалок теперь ВСЕГДА через history.back() (не прямое
+  // удаление класса) — так глубина истории браузера точно совпадает с
+  // реальной глубиной интерфейса (главная -> виджет -> модалка), и
+  // системная кнопка "назад" сама, без всяких хаков-компенсаций, ведёт
+  // себя правильно на каждом уровне. Раньше модалки НЕ добавляли свою
+  // запись в историю, а закрытие через "назад" пыталось задним числом
+  // компенсировать это повторным pushState — на практике сбивало счёт (по
+  // реальным сообщениям пользователей второе "назад" перепрыгивало сразу к
+  // окну входа, а должно было сначала попасть на главный экран).
   function closeCheevoAchModal() {
-    document.getElementById('cheevoAchModalBackdrop').classList.remove('open');
+    history.back();
   }
 
   // ===== WalletScope =====
@@ -1327,11 +1356,10 @@ else
           <div class="desc">${escapeHtml(tx.date)}</div>
           <div class="tx-amount ${tx.type}" style="margin-top:8px;font-size:1rem;">${(tx.type === 'income' || tx.type === 'deposit_in') ? '+' : '−'}${formatRub(tx.amount)}</div>
         </div>
-        ${(tx.type === 'deposit_in' || tx.type === 'deposit_out') ? '' : `
         <div class="bottom" style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px;justify-content:flex-end;gap:6px;">
           <button onclick="walletEditTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--text);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✎</button>
           <button onclick="walletDeleteTx(${tx.id})" style="font-size:0.65rem;background:none;border:1px solid var(--line);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer;font-family:inherit;">✕</button>
-        </div>`}
+        </div>
       </div>`).join('');
 
     return `<div class="widget-body">
@@ -1393,6 +1421,7 @@ else
     document.getElementById('walletTxDesc').value = tx ? tx.desc : '';
     document.getElementById('walletTxModalBackdrop').dataset.type = type;
     document.getElementById('walletTxModalBackdrop').classList.add('open');
+    history.pushState({ modalOpen: true }, '', location.href);
   }
 
   function walletEditTx(id) {
@@ -1430,6 +1459,7 @@ else
     document.getElementById('walletTransferAvailable').textContent = formatRub(walletLastData ? walletLastData.card : 0);
     document.getElementById('walletTransferAmount').value = '';
     document.getElementById('walletTransferModalBackdrop').classList.add('open');
+    history.pushState({ modalOpen: true }, '', location.href);
   }
 
   async function walletSaveTransfer() {
@@ -1449,6 +1479,7 @@ else
     document.getElementById('walletWithdrawAvailable').textContent = formatRub(walletLastData ? walletLastData.deposit : 0);
     document.getElementById('walletWithdrawAmount').value = '';
     document.getElementById('walletWithdrawModalBackdrop').classList.add('open');
+    history.pushState({ modalOpen: true }, '', location.href);
   }
 
   async function walletSaveWithdraw() {
@@ -1465,7 +1496,7 @@ else
   }
 
   function closeWalletModal(id) {
-    document.getElementById(id).classList.remove('open');
+    history.back();
   }
 
   // ===== MemoScope =====
@@ -1558,6 +1589,7 @@ else
     }
     document.getElementById('memoImageInput').value = '';
     document.getElementById('memoPostModalBackdrop').classList.add('open');
+    history.pushState({ modalOpen: true }, '', location.href);
   }
 
   function memoEditPost(id) {
@@ -1630,7 +1662,7 @@ else
   }
 
   function closeMemoModal() {
-    document.getElementById('memoPostModalBackdrop').classList.remove('open');
+    history.back();
   }
 
   function formatNtfyTime(unixTime) {
@@ -1883,9 +1915,12 @@ else
 
   function closeOverlay() {
     // Если поверх открыта модалка (транзакция/пост/ачивки) — кнопка
-    // "назад" сначала закрывает её саму, а не весь оверлей позади.
+    // "назад" сначала закрывает её саму, а не весь оверлей позади. Через
+    // history.back() — модалка тоже кладёт свою запись в историю при
+    // открытии (см. openCheevoAchievements/walletOpenTxModal/etc), прямое
+    // удаление класса оставило бы эту запись неучтённой "хвостом".
     const openModal = document.querySelector('.ms-modal-backdrop.open');
-    if (openModal) { openModal.classList.remove('open'); return; }
+    if (openModal) { history.back(); return; }
     // Не закрываем DOM напрямую — идём через history.back(), чтобы запись,
     // добавленная в openService(), не оставалась "хвостом" в истории
     // (иначе следующее нажатие системной кнопки "назад" пришлось бы делать
@@ -1909,10 +1944,6 @@ else
     const openModal = document.querySelector('.ms-modal-backdrop.open');
     if (openModal) {
       openModal.classList.remove('open');
-      const overlay = document.getElementById('serviceOverlay');
-      if (overlay && overlay.classList.contains('open')) {
-        history.pushState({ nexusOverlay: true }, '', location.href);
-      }
       return;
     }
     closeOverlayDom();
@@ -1921,7 +1952,7 @@ else
   document.addEventListener('keydown', (e) => {
     const openModal = document.querySelector('.ms-modal-backdrop.open');
     if (e.key === 'Escape') {
-      if (openModal) { openModal.classList.remove('open'); return; }
+      if (openModal) { history.back(); return; }
       closeOverlay();
       return;
     }
@@ -1940,7 +1971,7 @@ else
       );
       if (isEditable) return;
       e.preventDefault();
-      if (openModal) { openModal.classList.remove('open'); return; }
+      if (openModal) { history.back(); return; }
       closeOverlay();
     }
   });

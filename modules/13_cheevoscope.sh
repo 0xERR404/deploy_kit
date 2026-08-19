@@ -1555,6 +1555,41 @@ def cheevo_ra_start_refresh(mode="quick"):
 # Модалка "все ачивки" — порт achievement_details.py
 # ============================================================
 
+# ============================================================
+# Кэш иконок ачивок на диске — раньше картинки в модалке "все ачивки"
+# всегда грузились НАПРЯМУЮ с CDN Steam/RA при каждом открытии, из
+# браузера пользователя — медленно и зависит от доступности чужого CDN.
+# Иконки практически никогда не меняются после публикации, поэтому раз
+# скачали — храним бессрочно (без TTL, в отличие от игровых данных).
+# ============================================================
+
+def _cheevo_cache_icon(url, prefix):
+    """Скачивает иконку (если ещё не скачана) и возвращает ЛОКАЛЬНОЕ имя
+    файла — фронтенд отдаёт его через cheevoscope_local_image_proxy, а не
+    напрямую как абсолютный URL внешнего CDN."""
+    if not url:
+        return None
+    basename = url.split("/")[-1].split("?")[0]
+    if not basename:
+        return None
+    # Префикс разводит по играм/платформам — на случай совпадения имени
+    # файла на разных CDN (маловероятно, но дёшево подстраховаться).
+    local_filename = f"{prefix}_{basename}"
+    local_path = os.path.join(CHEEVO_IMAGES_DIR, local_filename)
+    if os.path.exists(local_path):
+        return local_filename
+    data = cheevo_download_image_bytes(url)
+    if data is None:
+        return None
+    try:
+        os.makedirs(CHEEVO_IMAGES_DIR, exist_ok=True)
+        with open(local_path, "wb") as f:
+            f.write(data)
+    except OSError:
+        return None
+    return local_filename
+
+
 def cheevo_get_steam_game_achievements(appid):
     schema = cheevo_cached_call(f"schema_ru_{appid}", lambda: cheevo_get_schema_for_game(appid),
                                  ttl_hours=CHEEVO_ACHIEVEMENT_SCHEMA_CACHE_TTL_HOURS)
@@ -1565,7 +1600,35 @@ def cheevo_get_steam_game_achievements(appid):
                                      ttl_hours=CHEEVO_CACHE_TTL_HOURS)
     pct_by_name = {a["name"]: a.get("percent") for a in global_pct}
 
-    player_data = cheevo_get_player_achievements(appid)
+    # cheevo_get_player_achievements раньше вызывался напрямую при КАЖДОМ
+    # открытии модалки — ни разу не заглядывая в кэш вообще, даже если
+    # основной пайплайн обновления только что получил те же данные. У
+    # основного кэша (player_ach_{appid}) TTL для активно играемых игр
+    # намеренно 0 (см. _cheevo_achievements_cache_ttl_hours — плановое
+    # обновление должно видеть свежий прогресс), но для МОДАЛКИ, открытой
+    # руками, это не годится: два клика по одной игре подряд означали два
+    # похода в Steam подряд. Сначала проверяем общий кэш (бесплатный выигрыш
+    # для завершённых/нулевых игр — там TTL и так большой), если он "не
+    # свежий" — свой короткий кэш только для модалки (15 минут), и только
+    # если оба промахнулись — идём в сеть.
+    cache_key = f"player_ach_{appid}"
+    modal_cache_key = f"player_ach_modal_{appid}"
+    player_data = None
+    shared_cached = cheevo_cache_get_with_age(cache_key)
+    if shared_cached is not None:
+        cached_data, age_hours = shared_cached
+        if age_hours <= _cheevo_achievements_cache_ttl_hours(cached_data):
+            player_data = cached_data
+    if player_data is None:
+        player_data = cheevo_cache_get(modal_cache_key, ttl_hours=0.25)
+    if player_data is None:
+        player_data = cheevo_get_player_achievements(appid)
+        if not player_data.get("transient_error"):
+            cheevo_cache_set(modal_cache_key, player_data)
+            # Заодно обновляем и общий кэш — основной пайплайн тоже
+            # выиграет от уже свежих данных, не будет дёргать Steam повторно
+            # сразу после того, как пользователь сам открыл модалку.
+            cheevo_cache_set(cache_key, player_data)
     unlocked_by_name = {a["apiname"]: a.get("unlocktime") for a in player_data.get("achievements", []) if a.get("achieved") == 1}
 
     achievements = []
@@ -1585,6 +1648,23 @@ def cheevo_get_steam_game_achievements(appid):
             "unlocked": apiname in unlocked_by_name, "unlock_time": unlocked_by_name.get(apiname),
         })
     achievements.sort(key=lambda a: (a["global_percent"] is None, a["global_percent"] or 0))
+
+    # Кэшируем иконки на диск ПАРАЛЛЕЛЬНО (в игре может быть и 100+ ачивок —
+    # последовательно было бы заметно медленно) и подменяем URL внешнего
+    # CDN на локальное имя файла — фронтенд отдаёт его через
+    # cheevoscope_local_image_proxy при следующих открытиях модалки.
+    def _cache_both_icons(a):
+        return (
+            _cheevo_cache_icon(a["icon"], f"ach{appid}"),
+            _cheevo_cache_icon(a["icon_gray"], f"achgray{appid}"),
+        )
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        cached_pairs = list(pool.map(_cache_both_icons, achievements))
+    for a, (icon_local, icon_gray_local) in zip(achievements, cached_pairs):
+        a["icon"] = icon_local
+        a["icon_gray"] = icon_gray_local
+
     return {"appid": appid, "available": True, "achievements": achievements}
 
 
@@ -1624,6 +1704,12 @@ def cheevo_get_retro_game_achievements(game_id):
             "unlock_time": a.get("DateEarnedHardcore") or a.get("DateEarned"),
         })
     achievements.sort(key=lambda a: (a["global_percent"] is None, a["global_percent"] or 0))
+
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        cached_badges = list(pool.map(lambda a: _cheevo_cache_icon(a["badge_url"], "rabadge"), achievements))
+    for a, badge_local in zip(achievements, cached_badges):
+        a["badge_url"] = badge_local
+
     return {"game_id": game_id, "available": True, "achievements": achievements}
 
 

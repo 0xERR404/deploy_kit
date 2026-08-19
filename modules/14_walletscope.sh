@@ -209,13 +209,16 @@ def widget_walletscope_edit(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
-    if tx["type"] in ("deposit_in", "deposit_out"):
-        handler._send_json({"error": "это запись о переводе с/на депозит — правится только через сам депозит, а не как обычная операция"}, status=400)
-        return
 
-    # Откатываем старый эффект на баланс карты, потом применяем новый —
-    # проще и надёжнее, чем высчитывать разницу отдельно для каждого поля.
-    data["card"] = round(data["card"] - (tx["amount"] if tx["type"] == "income" else -tx["amount"]), 2)
+    # deposit_in/deposit_out двигают баланс ДЕПОЗИТА, а не карты — те же
+    # правила редактирования, что у обычных income/expense (см. ниже),
+    # просто другой счёт. Менять категорию (карта <-> депозит) при
+    # редактировании нельзя — это была бы уже другая операция (перевод),
+    # а не правка существующей записи.
+    is_deposit_tx = tx["type"] in ("deposit_in", "deposit_out")
+    balance_key = "deposit" if is_deposit_tx else "card"
+    valid_types = ("deposit_in", "deposit_out") if is_deposit_tx else ("income", "expense")
+    plus_type = "deposit_in" if is_deposit_tx else "income"
 
     new_type = body.get("type", tx["type"])
     new_desc = (body.get("desc") or tx["desc"]).strip()[:200] or "Без описания"
@@ -225,14 +228,19 @@ def widget_walletscope_edit(handler, tx_id):
             new_amount = tx["amount"]
     except (TypeError, ValueError):
         new_amount = tx["amount"]
-    if new_type not in ("income", "expense") or new_amount <= 0:
+
+    if new_type not in valid_types or new_amount <= 0:
         handler._send_json({"error": "некорректные данные"}, status=400)
         return
 
+    # Проверка прошла — теперь можно спокойно менять баланс: откатываем
+    # старый эффект записи, потом применяем новый. Проще и надёжнее, чем
+    # высчитывать разницу отдельно для каждого поля.
+    data[balance_key] = round(data[balance_key] - (tx["amount"] if tx["type"] == plus_type else -tx["amount"]), 2)
     tx["type"] = new_type
     tx["amount"] = new_amount
     tx["desc"] = new_desc
-    data["card"] = round(data["card"] + (new_amount if new_type == "income" else -new_amount), 2)
+    data[balance_key] = round(data[balance_key] + (new_amount if new_type == plus_type else -new_amount), 2)
     save_walletscope(data)
     handler._send_json({"ok": True})
 
@@ -243,10 +251,10 @@ def widget_walletscope_delete(handler, tx_id):
     if not tx:
         handler._send_json({"error": "запись не найдена"}, status=404)
         return
-    if tx["type"] in ("deposit_in", "deposit_out"):
-        handler._send_json({"error": "это запись о переводе с/на депозит — отдельно не удаляется, депозит корректируйте напрямую"}, status=400)
-        return
-    data["card"] = round(data["card"] - (tx["amount"] if tx["type"] == "income" else -tx["amount"]), 2)
+    is_deposit_tx = tx["type"] in ("deposit_in", "deposit_out")
+    balance_key = "deposit" if is_deposit_tx else "card"
+    plus_type = "deposit_in" if is_deposit_tx else "income"
+    data[balance_key] = round(data[balance_key] - (tx["amount"] if tx["type"] == plus_type else -tx["amount"]), 2)
     data["transactions"] = [t for t in data.get("transactions", []) if str(t["id"]) != str(tx_id)]
     save_walletscope(data)
     handler._send_json({"ok": True})
