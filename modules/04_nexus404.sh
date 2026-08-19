@@ -134,12 +134,17 @@ else
   .stack-grid{ grid-template-columns:1fr !important; }
   @media(max-width:1100px){ .grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
   @media(max-width:760px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; } }
-  @media(max-width:420px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; } .grid-2col-mobile{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px; } }
+  @media(max-width:420px){ .grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; } .grid-2col-mobile{ grid-template-columns:repeat(2, minmax(0, 1fr)) !important; gap:8px; }
+    .wallet-card-actions{ flex-direction:column; }
+    .wallet-card-actions button{ width:100%; }
+  }
   @media(max-width:760px){
     .wallet-card-main{ order:1; }
     .wallet-card-deposit{ order:2; }
     .wallet-card-fiat{ order:3; }
     .wallet-card-crypto{ order:4; }
+    .repo-meta-sep{ display:none; }
+    .repo-date{ display:block; margin-top:2px; }
   }
 
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); padding:16px 16px 10px; transition:all 0.2s ease; cursor:pointer; text-decoration:none; color:var(--text); display:flex; flex-direction:column; justify-content:space-between; min-height:125px; box-shadow:0 0 20px rgba(108,142,255,0.04); }
@@ -266,7 +271,7 @@ else
   }
   @media(max-width:420px){
     .metrics-row{ flex-wrap:nowrap; }
-    .metrics-row .metric{ min-width:0; padding:6px 8px; text-align:center; }
+    .metrics-row .metric{ min-width:0; padding:6px 8px; }
     .metrics-row .metric .k{ font-size:0.5rem; }
     .metrics-row .metric .v{ font-size:0.65rem; }
     footer{ font-size:0.65rem; padding-top:10px; margin-top:16px; }
@@ -702,7 +707,7 @@ else
       if (!d.systems || d.systems.length === 0) {
         return `<div class="widget-placeholder">систем в Beszel пока нет</div>`;
       }
-      return `<div class="widget-body"><div class="grid grid-2col">${d.systems.map(sys => {
+      return `<div class="widget-body"><div class="grid">${d.systems.map(sys => {
         const netKb = sys.network_bytes_recent ? (sys.network_bytes_recent / 1024).toFixed(1) : '0';
         return `
           <div class="card static" style="align-items:stretch;cursor:default;">
@@ -797,7 +802,7 @@ else
               ${repo.private ? '<span class="badge">приватный</span>' : ''}
             </div>
             <div class="desc" style="margin-top:4px;color:var(--text);text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(repo.description || 'без описания')}</div>
-            <div class="desc" style="margin-top:4px;">${formatKb(repo.size_kb)} · ${formatNtfyTime(Math.floor(new Date(repo.updated_at).getTime()/1000)).slice(0,10)}</div>
+            <div class="desc repo-meta" style="margin-top:4px;"><span class="repo-size">${formatKb(repo.size_kb)}</span><span class="repo-meta-sep"> · </span><span class="repo-date">${formatNtfyTime(Math.floor(new Date(repo.updated_at).getTime()/1000)).slice(0,10)}</span></div>
             <input type="file" id="fj-upload-${escapeHtml(safeId)}" multiple style="display:none;" onchange="uploadFilesToForgejoRepo('${escapeHtml(repo.full_name)}')">
           </div>
           <div class="bottom" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
@@ -1368,12 +1373,12 @@ else
       </div>`).join('');
 
     return `<div class="widget-body">
-      <div class="grid grid-2col-mobile" style="margin-bottom:14px;">
+      <div class="grid grid-2col-mobile" style="margin-bottom:14px;align-items:start;">
         <div class="card static wallet-card-main wallet-balance-card" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Карта</div>
             <div class="balance-amount">${formatRub(d.card)}</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <div class="wallet-card-actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
               <button onclick="walletOpenTxModal('income')" style="font-size:0.7rem;color:var(--green);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">+ доход</button>
               <button onclick="walletOpenTxModal('expense')" style="font-size:0.7rem;color:var(--red);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">− расход</button>
             </div>
@@ -1405,7 +1410,7 @@ else
           <div class="top" style="width:100%;">
             <div class="balance-label">Депозит</div>
             <div class="balance-amount">${formatRub(d.deposit)}</div>
-            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            <div class="wallet-card-actions" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
               <button onclick="walletOpenTransferModal()" style="font-size:0.7rem;color:var(--accent);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">→ на депозит</button>
               <button onclick="walletOpenWithdrawModal()" style="font-size:0.7rem;color:var(--amber);background:none;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-family:inherit;">← снять</button>
             </div>
