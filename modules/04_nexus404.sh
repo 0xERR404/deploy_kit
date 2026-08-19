@@ -155,11 +155,13 @@ else
 
   .section-title{ display:flex; align-items:center; font-size:0.75rem; color:var(--amber); text-transform:uppercase; letter-spacing:0.08em; margin:14px 0 10px; padding:10px 16px; min-height:46px; box-sizing:border-box; background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); text-shadow:0 0 12px rgba(255,204,102,0.25); overflow:hidden; }
   .empty-state{ color:var(--muted); font-size:0.8rem; padding:30px 0; text-align:center; border:1px dashed var(--line); border-radius:var(--card-radius); }
-  footer{ margin-top:auto; text-align:center; font-size:0.76rem; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; }
+  footer{ margin-top:14px; text-align:center; font-size:0.76rem; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; }
 
-  .metrics-row{ display:flex; gap:1px; border:1px solid var(--line); margin-top:10px; box-shadow:0 0 20px rgba(108,142,255,0.04); overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  .metrics-row{ display:flex; gap:1px; border:1px solid var(--line); margin-top:auto; box-shadow:0 0 20px rgba(108,142,255,0.04); overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
   .metrics-row::-webkit-scrollbar{ display:none; }
   .metrics-row .metric{ flex:1; min-width:100px; background:var(--panel); padding:8px 12px; }
+  .metrics-row .metric:nth-child(2){ text-align:center; }
+  .metrics-row .metric:nth-child(3){ text-align:right; }
   .metrics-row .metric .k{ display:block; font-size:0.55rem; color:var(--muted); text-transform:lowercase; letter-spacing:0.06em; margin-bottom:1px; }
   .metrics-row .metric .v{ font-size:0.8rem; color:var(--accent); text-shadow:0 0 20px rgba(108,142,255,0.15); white-space:nowrap; }
 
@@ -213,10 +215,12 @@ else
   #memoImagePreview{ margin-top:10px; max-width:100%; max-height:140px; border-radius:6px; display:none; }
 
   /* ===== WalletScope ===== */
-  .balance-label{ font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); }
-  .balance-amount{ font-size:clamp(1.15rem, 4vw, 1.5rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
+  .balance-label{ font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); }
+  .balance-amount{ font-size:clamp(1rem, 3.2vw, 1.3rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
+  .wallet-balance-card{ padding:12px 12px 8px !important; min-height:0 !important; }
+  @media(max-width:420px){ .balance-amount{ font-size:1.05rem !important; } }
   .rates-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
-  .rate-chip{ aspect-ratio:1; border-radius:6px; padding:8px; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; }
+  .rate-chip{ aspect-ratio:1; border-radius:6px; padding:6px; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; }
   .rate-chip .sym{ color:var(--muted); font-size:0.65rem; text-transform:uppercase; }
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tx-amount.income{ color:var(--green); }
@@ -242,6 +246,7 @@ else
     .card{ padding:12px 12px 8px; min-height:110px; }
     .card .name{ font-size:0.8rem; }
     .card .desc{ font-size:0.68rem; }
+    .review-percent{ display:none; }
     .service-overlay-bar{ padding:8px 10px; gap:6px 8px; }
     .service-overlay-bar-left{ gap:6px; row-gap:4px; }
     .service-overlay-bar .back{ padding:4px 10px; font-size:0.65rem; }
@@ -782,7 +787,7 @@ else
       if (!d.repos || d.repos.length === 0) {
         return `<div class="widget-body">${createPanel}<div class="widget-placeholder">репозиториев пока нет</div></div>`;
       }
-      return `<div class="widget-body">${createPanel}<div class="grid grid-2col">${d.repos.map(repo => {
+      return `<div class="widget-body">${createPanel}<div class="grid">${d.repos.map(repo => {
         const safeId = repo.full_name.replace(/[^\w-]/g,'_');
         return `
         <div class="card static" id="fj-repo-${escapeHtml(safeId)}">
@@ -1059,7 +1064,7 @@ else
     // просто "не завезли": данные были готовы, просто не выводились.
     const reviewColor = (g.review_positive_percent ?? 0) >= 70 ? 'var(--green)' : ((g.review_positive_percent ?? 0) >= 40 ? 'var(--amber)' : 'var(--red)');
     const reviewBlock = g.review_desc ? `
-      <div style="font-size:0.65rem;color:${reviewColor};margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.review_desc)} · ${g.review_positive_percent ?? 0}%</div>` : '';
+      <div style="font-size:0.65rem;color:${reviewColor};margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(g.review_desc)}<span class="review-percent"> · ${g.review_positive_percent ?? 0}%</span></div>` : '';
     return `<div class="card${onclick ? '' : ' static'}" data-name="${escapeHtml((g.name || '').toLowerCase())}" data-hours="${g.hours ?? 0}" data-achpct="${g.achievements_percent ?? -1}" ${onclick ? `onclick="${onclick}"` : 'style="cursor:default;"'}>
       <div class="top">
         <img src="${escapeHtml(candidates[0] || '')}" data-candidates='${escapeHtml(JSON.stringify(candidates))}' data-fallback-idx="0" loading="lazy" onerror="handleCheevoImgError(this)" style="width:100%;aspect-ratio:16/7.5;object-fit:cover;border-radius:6px;margin-bottom:8px;background:var(--bg);">
@@ -1364,7 +1369,7 @@ else
 
     return `<div class="widget-body">
       <div class="grid grid-2col-mobile" style="margin-bottom:14px;">
-        <div class="card static wallet-card-main" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-main wallet-balance-card" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Карта</div>
             <div class="balance-amount">${formatRub(d.card)}</div>
@@ -1374,7 +1379,7 @@ else
             </div>
           </div>
         </div>
-        <div class="card static wallet-card-fiat" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-fiat wallet-balance-card" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Валюта</div>
             <div class="rates-grid" style="margin-top:8px;">
@@ -1385,7 +1390,7 @@ else
             </div>
           </div>
         </div>
-        <div class="card static wallet-card-crypto" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-crypto wallet-balance-card" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Криптовалюта</div>
             <div class="rates-grid" style="margin-top:8px;">
@@ -1396,7 +1401,7 @@ else
             </div>
           </div>
         </div>
-        <div class="card static wallet-card-deposit" style="align-items:stretch;cursor:default;">
+        <div class="card static wallet-card-deposit wallet-balance-card" style="align-items:stretch;cursor:default;">
           <div class="top" style="width:100%;">
             <div class="balance-label">Депозит</div>
             <div class="balance-amount">${formatRub(d.deposit)}</div>
