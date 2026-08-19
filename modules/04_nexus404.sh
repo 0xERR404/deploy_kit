@@ -145,6 +145,7 @@ else
     .wallet-card-crypto{ order:4; }
     .repo-meta-sep{ display:none; }
     .repo-date{ display:block; margin-top:2px; }
+    .rates-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   }
 
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--card-radius); padding:16px 16px 10px; transition:all 0.2s ease; cursor:pointer; text-decoration:none; color:var(--text); display:flex; flex-direction:column; justify-content:space-between; min-height:125px; box-shadow:0 0 20px rgba(108,142,255,0.04); }
@@ -224,7 +225,7 @@ else
   .balance-amount{ font-size:clamp(1rem, 3.2vw, 1.3rem); font-weight:600; overflow-wrap:break-word; margin-top:4px; }
   .wallet-balance-card{ padding:12px 12px 8px !important; min-height:0 !important; }
   @media(max-width:420px){ .balance-amount{ font-size:1.05rem !important; } }
-  .rates-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+  .rates-grid{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; }
   .rate-chip{ aspect-ratio:1; border-radius:6px; padding:6px; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; }
   .rate-chip .sym{ color:var(--muted); font-size:0.65rem; text-transform:uppercase; }
   .rate-chip .val{ color:var(--text); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
